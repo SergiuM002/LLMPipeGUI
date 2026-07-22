@@ -16,8 +16,9 @@ from pathlib import Path
 class MainController:
     def __init__(self):
         self.root = ctk.CTk()
+        self.root.withdraw()
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-        self.root.title("LLMPipeLine")
+        self.root.title("LLMPipeScoreVisualizer")
         self.root.resizable(False, False)
         self.root.rowconfigure(0, weight=1)
         self.root.columnconfigure(0, weight=1)
@@ -55,11 +56,6 @@ class MainController:
         
         self.root.after(200, self.resize_window, self.root, self.current_monitor)
         
-        # Hide the packing of the frames
-        hider = ctk.CTkFrame(self.root, fg_color=None)
-        hider.grid(row=0, column=0, sticky=ctk.NSEW)
-        hider.tkraise()
-        
         self.opening_screen_ctrl = OpeningScreenController(self)
         self.opening_screen_view = OpeningScreen(self.opening_screen_ctrl, self.root)
         
@@ -73,9 +69,9 @@ class MainController:
         self.view_sessions_view.grid(row=0, column=0, sticky=ctk.NSEW)
         self.create_session_view.grid(row=0, column=0, sticky=ctk.NSEW)
         
-        hider.tkraise()
-        
         self.show_opening_screen()
+        self.root.update_idletasks()
+        self.root.deiconify()
         self.root.update()
         
         self.root.mainloop()
