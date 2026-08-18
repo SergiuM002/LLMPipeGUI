@@ -4,6 +4,7 @@ from CTkMessagebox import CTkMessagebox
 from customtkinter import filedialog
 from config.styles import Theme
 import config.environment as env
+from ui.error_popup import ErrorPopup
 
 class SessionTab(ctk.CTkFrame):
     def __init__(self, controller, master, **kwargs):   
@@ -147,7 +148,7 @@ class SessionTab(ctk.CTkFrame):
         else:
             output_path = filedialog.askdirectory(title="Select a path")
             
-        self.controller.get_files(output_path)
+        self.controller.get_files(self, output_path)
         
     def delete_button_clicked(self):
         self.controller.confirm_delete(self)
@@ -170,6 +171,9 @@ class SessionTab(ctk.CTkFrame):
         )
         
         return msg_box.get()
+    
+    def show_popup_error(self, message):
+        ErrorPopup(self.controller.main_ctrl.root, self.controller.main_ctrl.height_quo, message)
     
     def delete_self(self):
         self.pack_forget()

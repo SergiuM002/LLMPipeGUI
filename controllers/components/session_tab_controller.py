@@ -44,8 +44,14 @@ class SessionTabController:
                 view.show_session_state_in_progress(self.sequence_progress, self.sequence_count, self.progress)
                 
     def start_session(self, view):
-        self.main_ctrl.ssh_controller.execute_command(f"touch ~/LLMPipe/{self.session_name}.log")
-            
+        
+        _, err, error_code = self.main_ctrl.ssh_controller.execute_command(f"touch ~/LLMPipe/{self.session_name}.log")
+  
+        if error_code != 0:
+            print(err)
+            view.show_popup_error(err)
+            return
+        
         command = (
             "cd ~/LLMPipe && "
             "source ../miniconda3/etc/profile.d/conda.sh && "
@@ -85,10 +91,20 @@ class SessionTabController:
             f"tmux kill-session -t {self.session_name}"
         )
         
-        self.main_ctrl.ssh_controller.execute_command(f"tmux new-session -d -s {self.session_name}")
+        _, err, error_code = self.main_ctrl.ssh_controller.execute_command(f"tmux new-session -d -s {self.session_name}")
+        
+        if error_code != 0:
+            print(err)
+            view.show_popup_error(err)
+            return
 
-        self.main_ctrl.ssh_controller.execute_command(f'tmux send-keys -t {self.session_name} "{command}" C-m')
+        _, err, error_code = self.main_ctrl.ssh_controller.execute_command(f'tmux send-keys -t {self.session_name} "{command}" C-m')
 
+        if error_code != 0:
+            print(err)
+            view.show_popup_error(err)
+            return
+                
         _, stdout, _ = self.main_ctrl.ssh_controller.ssh_client.exec_command(f"tail -f ~/LLMPipe/{self.session_name}.log")   
         
         self.start_progress_updates(view, stdout)
@@ -147,16 +163,20 @@ class SessionTabController:
                 self.main_ctrl.root.after(0, view.update_finished_progress)
                 stdout.channel.close()
                 
-    def get_files(self, output_path):
-        _, _, exit_status = self.main_ctrl.ssh_controller.execute_command(
+    def get_files(self, view, output_path):
+        _, err, exit_code = self.main_ctrl.ssh_controller.execute_command(
             f"tar -czf ~/LLMPipe/result.tar.gz -C ~/LLMPipe/results/{self.session_name} ."
         )
         
-        if exit_status == 0:
+        if exit_code == 0:
             out, _, _ = self.main_ctrl.ssh_controller.execute_command("pwd")
             home_dir = out.strip()
             self.main_ctrl.ssh_controller.retrieve_file(f"{home_dir}/LLMPipe/result.tar.gz", f"{output_path}/{self.session_name}_results.tar.gz")
             self.main_ctrl.ssh_controller.execute_command("rm ~/LLMPipe/result.tar.gz")
+        else:
+            print(err)
+            view.show_popup_error(err)
+            return
         
         command = (
             f"cd '{output_path}' && "
@@ -169,7 +189,17 @@ class SessionTabController:
         else:
             command += f"rm {self.session_name}_results.tar.gz"
         
-        subprocess.run(command, shell=True)
+        try:
+            subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError as e:
+            err_msg = e.stderr.strip() or f"Exit code {e.returncode}"
+            err = f"Command '{command}' failed: \n{err_msg}"
+            print(err)
+            view.show_popup_error(err)
+        except PermissionError as e:
+            err = f"Permission denied: {e}"
+            print(err)
+            view.show_popup_error(err)
         
     def confirm_delete(self, view):
         finished = False
@@ -189,20 +219,32 @@ class SessionTabController:
             self.main_ctrl.ssh_controller.execute_command(f"rm -r ~/LLMPipe/results/{self.session_name}")  
         else:
             check_cmd = f"tmux has-session -t {self.session_name} 2>/dev/null"
-            _, _, exit_status = self.main_ctrl.ssh_controller.execute_command(check_cmd)
+            _, err, exit_code = self.main_ctrl.ssh_controller.execute_command(check_cmd)
         
-            if exit_status == 0:
+            if exit_code == 0:
                 self.main_ctrl.ssh_controller.execute_command(f"tmux kill-session -t {self.session_name}")
+            else:
+                print(err)
+                view.show_popup_error(err)
+                return
                 
-            _, _, exit_status = self.main_ctrl.ssh_controller.execute_command(f"[ -f ~/LLMPipe/{self.session_name}.log ]")
+            _, err, exit_code = self.main_ctrl.ssh_controller.execute_command(f"[ -f ~/LLMPipe/{self.session_name}.log ]")
             
-            if exit_status == 0:
+            if exit_code == 0:
                 self.main_ctrl.ssh_controller.execute_command(f"rm ~/LLMPipe/{self.session_name}.log")
+            else:
+                print(err)
+                view.show_popup_error(err)
+                return
             
-            _, _, exit_status = self.main_ctrl.ssh_controller.execute_command(f"[ -f ~/LLMPipe/{self.session_name}.fa ]")
+            _, err, exit_code = self.main_ctrl.ssh_controller.execute_command(f"[ -f ~/LLMPipe/{self.session_name}.fa ]")
             
-            if exit_status == 0:
+            if exit_code == 0:
                 self.main_ctrl.ssh_controller.execute_command(f"rm ~/LLMPipe/{self.session_name}.fa")
+            else:
+                print(err)
+                view.show_popup_error(err)
+                return
         
         self.main_ctrl.force_coordinate_update(view.master)
         self.cleanup(view)        

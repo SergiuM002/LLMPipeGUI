@@ -11,7 +11,7 @@ from controllers.views.view_sessions_controller import ViewSessionsController
 from controllers.ssh_controller import SSHController
 import config.environment as env
 from config.fonts import Fonts
-from pathlib import Path
+from ui.error_popup import ErrorPopup
 
 class MainController:
     def __init__(self):
@@ -298,16 +298,19 @@ class MainController:
                 self.sessions[i].on_login_config()
                     
                 # Resume progress updates
-                _, _, exit_code = self.ssh_controller.execute_command(f"[ -f ~/LLMPipe/{self.session_ctrls[i].session_name}.log ]")
-                    
-                if exit_code == 0:
+                _, err, error_code = self.ssh_controller.execute_command(f"[ -f ~/LLMPipe/{self.session_ctrls[i].session_name}.log ]")
+                
+                if error_code == 0: 
                     _, stdout, _ = self.ssh_controller.ssh_client.exec_command(f"tail -f ~/LLMPipe/{self.session_ctrls[i].session_name}.log")  
-                    
                     self.session_ctrls[i].resume_progress_updates(self.sessions[i], stdout, self.session_ctrls[i].sequence_progress)
-                else:
+                elif error_code > 0:
                     self.session_ctrls[i].progress = 1
                     self.session_ctrls[i].sequence_progress = self.session_ctrls[i].sequence_count
-                    self.sessions[i].update_finished_progress()
+                    self.sessions[i].update_finished_progress()   
+                else:
+                    print(err)
+                    ErrorPopup(self.root, err)
+                    
         
     def on_closing(self):
         self.save_sessions()

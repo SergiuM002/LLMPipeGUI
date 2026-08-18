@@ -26,6 +26,7 @@ class LoginWindowController:
         if not view.server_entry.get() or not view.username_entry.get() or not view.password_entry.get():
             self.main_ctrl.root.after(0, view.show_fields_error_message_box)
             self.main_ctrl.root.after(0, view.enable_confirm_button)
+            return
             
         server = view.server_entry.get()
         username = view.username_entry.get()

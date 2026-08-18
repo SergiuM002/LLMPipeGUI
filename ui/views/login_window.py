@@ -1,6 +1,5 @@
 import customtkinter as ctk
-from CTkMessagebox import CTkMessagebox
-import config.environment as env
+from ui.error_popup import ErrorPopup
 from config.styles import Theme
 
 class LoginWindow(ctk.CTkToplevel):
@@ -89,36 +88,15 @@ class LoginWindow(ctk.CTkToplevel):
         
     def show_fields_error_message_box(self):
         scaling = self.controller.main_ctrl.height_quo
-        self.msg_box = CTkMessagebox(
-                master=self.controller.main_ctrl.root,
-                title="Error",
-                message="Please fill out all the fields.",
-                icon="cancel",
-                width=int(400*scaling),
-                height=int(200*scaling),
-                button_width=int(130*scaling),
-                button_height=int(40*scaling),
-                button_color=Theme.GREEN_BUTTON,
-                button_hover_color=Theme.GREEN_BUTTON_HOVER
-            )            
+        self.msg_box = ErrorPopup(self.controller.main_ctrl.root, scaling, "Please fill out all the fields.")
+
         self.msg_box.bind("<Destroy>", lambda e: self.controller.clean_msg_box_bindings(e, self))   
         
         self.confirm_button.configure(state="normal") 
         
     def show_input_error_message_box(self, message):
         scaling = self.controller.main_ctrl.height_quo
-        self.msg_box = CTkMessagebox(
-            master=self.controller.main_ctrl.root,
-            title="Error",
-            message=message,
-            icon="cancel",
-            width=int(400*scaling),
-            height=int(200*scaling),
-            button_width=int(130*scaling),
-            button_height=int(40*scaling),
-            button_color=Theme.GREEN_BUTTON,
-            button_hover_color=Theme.GREEN_BUTTON_HOVER
-        )  
+        self.msg_box = ErrorPopup(self.controller.main_ctrl.root, scaling, message)
         self.msg_box.bind("<Destroy>", lambda e: self.controller.clean_msg_box_bindings(e, self))   
         
         self.confirm_button.configure(state="normal") 

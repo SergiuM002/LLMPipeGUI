@@ -1,6 +1,7 @@
 import subprocess
 import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
+from ui.error_popup import ErrorPopup
 from customtkinter import filedialog
 from ui.components.collapsible_multiselect import CollapsibleMultiSelect
 from controllers.components.collapsible_multiselect_controller import CollapsibleMultiselectController
@@ -214,18 +215,7 @@ class CreateSession(ctk.CTkFrame):
         
     def show_start_error(self, msg):
         scaling = self.controller.main_ctrl.height_quo
-        CTkMessagebox(
-            master=self.controller.main_ctrl.root,
-            title="Error",
-            message=msg,
-            icon="cancel",
-            width=int(400*scaling),
-            height=int(200*scaling),
-            button_width=int(130*scaling),
-            button_height=int(40*scaling),
-            button_color=Theme.GREEN_BUTTON,
-            button_hover_color=Theme.GREEN_BUTTON_HOVER
-        )
+        ErrorPopup(self.controller.main_ctrl.root, scaling, msg)
         
     def show_import_failure(self):
         self.filter_entry.delete(0, ctk.END)
@@ -235,6 +225,9 @@ class CreateSession(ctk.CTkFrame):
         self.search_frame.pack_forget()
         
         self.import_text.set("uploaded file: (invalid file)")
+        
+    def show_error_popup(self, message):
+        ErrorPopup(self.controller.main_ctrl.root, self.controller.main_ctrl.height_quo, str(message))
                 
     def show_general_import(self):    
         self.import_text.set("uploaded file: "+self.controller.file_path) 

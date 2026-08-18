@@ -1,4 +1,3 @@
-import config.environment as env
 import os
 import re
 import threading
@@ -41,13 +40,13 @@ class CreateSessionController:
         self.final_file = view.output_text.get() + ".fa"
             
         view.show_filtering_start()
-        self.filter_fasta()
+        self.filter_fasta(view)
         
         view.show_creating_session_start()
         self.start_session(view)
         view.show_creating_session_finish()
     
-    def filter_fasta(self):
+    def filter_fasta(self, view):
         with open(self.file_path, "r") as file:
             file_content = file.read()
         
@@ -77,9 +76,22 @@ class CreateSessionController:
         with open(self.final_file, "w") as file:
             file.write(output_string)
         try:
-            out, _, _ = self.main_ctrl.ssh_controller.execute_command("pwd")
+            out, err, exit_code = self.main_ctrl.ssh_controller.execute_command("pwd")
+            
+            if exit_code != 0:
+                print(err)
+                view.show_error_popup(err)
+                return
+            
             home_dir = out.strip()
-            self.main_ctrl.ssh_controller.transfer_file(self.final_file, f"{home_dir}/LLMPipe/{self.final_file}")
+            
+            try:
+                self.main_ctrl.ssh_controller.transfer_file(self.final_file, f"{home_dir}/LLMPipe/{self.final_file}")
+            except RuntimeError as e:
+                print(e)
+                view.show_error_popup(str(e)) 
+                return
+                
         finally:
             os.remove(self.final_file)
         
