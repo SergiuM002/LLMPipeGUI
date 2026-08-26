@@ -5,11 +5,11 @@ from pathlib import Path
 OPERATING_SYSTEM = platform.system()
 
 if getattr(sys, 'frozen', False):
-    BASE_DIR = Path(sys.executable).resolve().parent
+    BASE_DIR = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent.parent.parent))
 else:
-    BASE_DIR = Path(__file__).resolve().parent.parent
+    BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-DATA_DIR = BASE_DIR / "data"
+DATA_DIR = BASE_DIR / "src" / "data"
 SESSIONS_FILE = DATA_DIR / "sessions.json"
 LASTLOGIN_FILE = DATA_DIR / "lastlogin.json"
 

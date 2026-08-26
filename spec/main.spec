@@ -1,8 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
+
+project_root = os.path.abspath(os.path.join(SPECPATH, '..'))
+src_dir = os.path.abspath(os.path.join(SPECPATH, '../src'))
 
 a = Analysis(
-    ['../main.py'],
-    pathex=[os.path.join(SPECPATH, '..')],
+    ['../src/main.py'],
+    pathex=[project_root, src_dir],
     binaries=[],
     datas=[],
     hiddenimports=['PIL._tkinter_finder'],
