@@ -36,7 +36,14 @@ class SessionTab(ctk.CTkFrame):
             fg_color="transparent"
         )
         
-        self.progress_frame.pack(anchor=ctk.W, padx=20, pady=20)
+        self.progress_frame.pack(side=ctk.LEFT, padx=20, pady=20)
+              
+        self.progress_bar = ctk.CTkProgressBar(
+            self.progress_frame,
+            progress_color=Theme.GREEN_BUTTON
+        )
+        self.progress_bar.set(0)
+        self.progress_bar.pack(anchor=ctk.W)
         
         self.progress_text = ctk.StringVar(self.info_frame, "starting model...")
         self.progress_label = ctk.CTkLabel(
@@ -45,22 +52,21 @@ class SessionTab(ctk.CTkFrame):
             font=("Roboto", 13),
             text_color=("gray20", "white")
         )
+        self.progress_label.pack(anchor=ctk.W, padx=(0, 10))
         
-        self.progress_label.pack(side=ctk.LEFT, padx=(0, 10))
-        
-        self.progress_bar = ctk.CTkProgressBar(
-            self.progress_frame,
-            progress_color=Theme.GREEN_BUTTON
+        self.time_remaining = ctk.StringVar(self.progress_frame, "Sequence ETA: --")
+        self.time_remaining_label = ctk.CTkLabel(
+            self.progress_frame, 
+            textvariable=self.time_remaining,
+            font=("Roboto", 13),
+            text_color=("gray20", "white")
         )
-        
-        self.progress_bar.set(0)
-        self.progress_bar.pack(side=ctk.LEFT)
+        self.time_remaining_label.pack(anchor=ctk.W)
         
         self.button_frame = ctk.CTkFrame(
             self,
             fg_color="transparent"
-        )
-        
+        )    
         self.button_frame.pack(side=ctk.RIGHT, padx=20, pady=20)
         
         self.get_file_button = ctk.CTkButton(
@@ -95,27 +101,36 @@ class SessionTab(ctk.CTkFrame):
         self.delete_button.configure(state="normal")
         
     def show_session_state_in_progress(self, sequence_progress, sequence_count, progress):
+        self.time_remaining_label.pack_forget()
         self.project_label.configure(text_color="#D6C851")
         self.progress_bar.configure(progress_color="#D6C851")
         self.progress_bar.set(progress)
         self.progress_text.set(f"{sequence_progress}/{sequence_count} | {round(progress*100)}%")
         
     def show_session_state_sequence_finished(self, sequence_progress, sequence_count):
+        self.time_remaining_label.pack_forget()
         self.progress_bar.pack_forget()
         self.progress_text.set(f"{sequence_progress}/{sequence_count} | processing data...")
         self.project_label.configure(text_color="#D6C851")
         
     def show_session_state_finished(self):
+        self.time_remaining_label.pack_forget()
         self.progress_bar.pack_forget()
         self.progress_text.set("done.")
         
     def pack_progress_bar(self):
-        self.progress_bar.pack(side=ctk.LEFT)
+        self.progress_bar.pack()
+        
+    def pack_time_remaining_label(self):
+        self.time_remaining_label.pack(anchor=ctk.W)
     
     def update_percentage_progress(self, sequence_progress, sequence_count, percentage, progress):
-        self.progress_text.set(f"{sequence_progress}/{sequence_count} | {percentage}\r")
+        self.progress_text.set(f"{sequence_progress}/{sequence_count} | {percentage}%\r")
         self.progress_bar.set(progress)
         self.progress_label.update()
+        
+    def update_eta(self, eta):
+        self.time_remaining.set(f"Sequence ETA: {eta}")
         
     def update_processing_progress(self, sequence_progress, sequence_count):
         self.progress_text.set(f"{sequence_progress}/{sequence_count} | processing data...")
@@ -123,7 +138,8 @@ class SessionTab(ctk.CTkFrame):
         self.progress_label.update()
         
     def update_finished_progress(self):
-        self.progress_bar.destroy()
+        self.time_remaining_label.destroy()
+        self.progress_bar.destroy() 
         self.progress_text.set("done.")
         self.get_file_button.configure(state="normal")
         self.progress_label.update()

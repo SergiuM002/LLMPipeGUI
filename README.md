@@ -12,7 +12,7 @@ Create the venv environment using `python -m venv .venv`, activate it and instal
 ### Setting up the remote part
 Use the "install_llm_pipe.py" script in the "install script" directory to install the environment and the script used to run the LLM on your server.
 
-### Use the GUI
+### Using the GUI
 Now you can launch the GUI from "main.py" and use the different LLMs to score your sequences.
 
 ## Building the program

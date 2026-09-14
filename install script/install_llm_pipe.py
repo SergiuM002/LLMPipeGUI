@@ -235,8 +235,6 @@ def install():
         f"{CONDA_BIN} tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && "
         f"{CONDA_BIN} tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r"
     )
-    
-    print(stderr.read().decode())
 
     progress_bar.set(0.2)
     progress_bar.configure(progress_color="#1f538d")    

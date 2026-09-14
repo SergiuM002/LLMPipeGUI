@@ -109,7 +109,7 @@ class CreateSessionController:
             
     # Checks if a session with the specified name already exists
     def session_exists(self, session_name):
-        check_cmd = f"tmux has-session -t {session_name} 2>/dev/null"
+        check_cmd = f"tmux has-session -t ={session_name} 2>/dev/null"
         _, _, exit_code = self.main_ctrl.ssh_controller.execute_command(check_cmd)
         
         if exit_code == 0:

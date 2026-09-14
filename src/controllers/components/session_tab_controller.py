@@ -1,6 +1,7 @@
 import subprocess
 import config.environment as env
 import threading
+import re
 
 class SessionTabController:
     def __init__(
@@ -133,28 +134,32 @@ class SessionTabController:
                 chunk = stdout.channel.recv(1048576).decode('utf-8', errors='ignore')
                 buffer += chunk
                 
-                if '\n' in buffer:
-                    if self.sequence_count > sequence_progress and "Processing windows: " in buffer:
-                        sequence_progress += 1
-                        self.sequence_progress = sequence_progress
+                if '\n' in buffer and self.sequence_count > sequence_progress and re.search(r"Processing windows: \d+it ", buffer):
+                    sequence_progress += 1
+                    self.sequence_progress = sequence_progress
 
                 if '\r' in buffer and view.progress_text.get() != "transfering files...":
                     updates = buffer.split('\r')
                     current_status = updates[-1].strip()
                     
-                    if "Processing windows: " in current_status:
-                        percentage = current_status.split("Processing windows: ")[-1][0:4]
-                        if "%" in percentage:   
-                            if bar_packed == False:
-                                bar_packed = True
-                                self.main_ctrl.root.after(0, view.pack_progress_bar)
-                            
-                            self.progress = int(percentage[0:-1])/100
-                            self.main_ctrl.root.after(0, view.update_percentage_progress, self.sequence_progress, self.sequence_count, percentage, self.progress)
-                        else:
-                            bar_packed = False
-                            self.progress = 1
-                            self.main_ctrl.root.after(0, view.update_processing_progress, self.sequence_progress, self.sequence_count)
+                    if match_processing := re.search(r"Processing windows:\s*(\d+)%", current_status):
+                        if bar_packed == False:
+                            bar_packed = True
+                            self.main_ctrl.root.after(0, view.pack_progress_bar)
+                            self.main_ctrl.root.after(0, view.pack_time_remaining_label)
+                        
+                        percentage = int(match_processing.group(1))
+                        if match_eta := re.search(r"<((\d+:)*\d+),", current_status):
+                            eta = match_eta.group(1)      
+                            self.main_ctrl.root.after(0, view.update_eta, str(eta))     
+                        
+                        self.progress = int(percentage)/100
+                        self.main_ctrl.root.after(0, view.update_percentage_progress, self.sequence_progress, self.sequence_count, percentage, self.progress)
+
+                    else:
+                        bar_packed = False
+                        self.progress = 1
+                        self.main_ctrl.root.after(0, view.update_processing_progress, self.sequence_progress, self.sequence_count)
                     
                     buffer = updates[-1]
                     
@@ -218,7 +223,7 @@ class SessionTabController:
         if finished:
             self.main_ctrl.ssh_controller.execute_command(f"rm -r ~/LLMPipe/results/{self.session_name}")  
         else:
-            check_cmd = f"tmux has-session -t {self.session_name} 2>/dev/null"
+            check_cmd = f"tmux has-session -t ={self.session_name} 2>/dev/null"
             _, err, exit_code = self.main_ctrl.ssh_controller.execute_command(check_cmd)
         
             if exit_code == 0:
