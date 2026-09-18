@@ -4,6 +4,7 @@ from CTkMessagebox import CTkMessagebox
 from customtkinter import filedialog
 from config.styles import Theme
 import config.environment as env
+from tkinter import TclError
 from ui.error_popup import ErrorPopup
 
 class SessionTab(ctk.CTkFrame):
@@ -96,6 +97,12 @@ class SessionTab(ctk.CTkFrame):
         self.delete_button.pack(anchor=ctk.E, pady=10)
         
         self.controller.set_session_state(self)
+        
+    def call_live_progress_update(self, func, *args):
+        try:
+            func(*args)
+        except TclError:
+            self.controller.stop_event.set()
         
     def show_session_state_start(self):
         self.delete_button.configure(state="normal")

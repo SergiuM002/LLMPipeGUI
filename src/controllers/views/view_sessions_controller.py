@@ -35,7 +35,7 @@ class ViewSessionsController:
             
     def reload_sessions(self):
         for session_view in self.main_ctrl.sessions:
-            session_view.after_idle(session_view.destroy)
+            session_view.after_idle(session_view.delete_self)
             
         self.main_ctrl.sessions = []
         self.main_ctrl.session_ctrls = []

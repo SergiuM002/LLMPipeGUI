@@ -28,6 +28,8 @@ class SessionTabController:
         self.server = server
         self.user = user
         
+        self.stop_event = None
+        
     def set_session_state(self, view):
         if self.model_selection != None and self.align != None:
             # When starting a fresh session
@@ -40,7 +42,7 @@ class SessionTabController:
                 if self.sequence_progress == self.sequence_count:
                     view.show_session_state_finished()
                 else:
-                    view.show_session_sequence_finished(self.sequence_progress, self.sequence_count)
+                    view.show_session_state_sequence_finished(self.sequence_progress, self.sequence_count)
             else:
                 view.show_session_state_in_progress(self.sequence_progress, self.sequence_count, self.progress)
                 
@@ -145,28 +147,50 @@ class SessionTabController:
                     if match_processing := re.search(r"Processing windows:\s*(\d+)%", current_status):
                         if bar_packed == False:
                             bar_packed = True
-                            self.main_ctrl.root.after(0, view.pack_progress_bar)
-                            self.main_ctrl.root.after(0, view.pack_time_remaining_label)
+                            self.main_ctrl.root.after(0, view.call_live_progress_update, view.pack_progress_bar)
+                            self.main_ctrl.root.after(0, view.call_live_progress_update, view.pack_time_remaining_label)
                         
                         percentage = int(match_processing.group(1))
                         if match_eta := re.search(r"<((\d+:)*\d+),", current_status):
                             eta = match_eta.group(1)      
-                            self.main_ctrl.root.after(0, view.update_eta, str(eta))     
+                            self.main_ctrl.root.after(
+                                0, 
+                                view.call_live_progress_update, 
+                                view.update_eta, 
+                                str(eta)
+                            )     
                         
                         self.progress = int(percentage)/100
-                        self.main_ctrl.root.after(0, view.update_percentage_progress, self.sequence_progress, self.sequence_count, percentage, self.progress)
-
+                        self.main_ctrl.root.after(
+                            0, 
+                            view.call_live_progress_update, 
+                            view.update_percentage_progress, 
+                            self.sequence_progress, 
+                            self.sequence_count, 
+                            percentage, self.progress
+                        )
                     else:
                         bar_packed = False
                         self.progress = 1
-                        self.main_ctrl.root.after(0, view.update_processing_progress, self.sequence_progress, self.sequence_count)
+                        self.main_ctrl.root.after(
+                            0, 
+                            view.call_live_progress_update, 
+                            view.update_processing_progress, 
+                            self.sequence_progress, 
+                            self.sequence_count
+                        )
                     
                     buffer = updates[-1]
-                    
+        
             if "Script finished." in buffer:
                 self.stop_event.set()
-                self.main_ctrl.root.after(0, view.update_finished_progress)
+                self.main_ctrl.root.after(
+                    0, 
+                    view.call_live_progress_update, 
+                    view.update_finished_progress
+                )
                 stdout.channel.close()
+
                 
     def get_files(self, view, output_path):
         _, err, exit_code = self.main_ctrl.ssh_controller.execute_command(
