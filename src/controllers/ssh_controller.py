@@ -78,3 +78,31 @@ class SSHController:
         with self.sftp_client.open(remote_path, "r") as remote_file:
             for line in remote_file:
                 yield line
+                
+    def get_finished_remote_paths(self):
+        cmd = "find ~/LLMPipe/results -mindepth 2 -maxdepth 2 -type f"
+        return self.execute_command(cmd)[0] or ""
+        
+    def get_running_remote_sessions_info(self):
+        """Get the running remote sessions."""   
+        # Get active tmux sessions
+        tmux_sessions, _, exit_code = self.execute_command('tmux ls -F "#{session_name}"')
+        if exit_code != 0 or tmux_sessions == "":
+            return ""
+        
+        tmux_sessions = tmux_sessions.splitlines()
+            
+        # Batch count and log inspections for ALL tmux sessions into 1 compound shell command
+        cmd_parts = []
+        for s in tmux_sessions:
+            cmd_parts.append(
+                f'if [ -f ~/LLMPipe/{s}.log ]; then '
+                f'sc=$(grep -c "^>" ~/LLMPipe/{s}.fa 2>/dev/null || echo 0); '
+                f'sp=$(grep -c -E "Processing windows: [0-9]+it " ~/LLMPipe/{s}.log 2>/dev/null || true); '
+                f'last=$(tr "\r" "\n" < ~/LLMPipe/{s}.log | tail -n 1 ); '
+                f'echo "{s}|$sc|$sp|$last"; '
+                f'fi'
+            )
+            
+        batch_cmd = " ; ".join(cmd_parts)
+        return self.execute_command(batch_cmd)[0] or ""

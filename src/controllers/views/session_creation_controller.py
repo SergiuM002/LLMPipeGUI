@@ -33,6 +33,8 @@ class CreateSessionController:
             view.show_start_error(msg) 
             return
         
+        self.main_ctrl.sync_sessions()
+        
         if self.session_exists(view.output_text.get()):
             view.show_session_exists_error()
             return
@@ -184,7 +186,6 @@ class CreateSessionController:
         except Exception as e:
             print(f"Error searching file: {e}")
                                 
-            
-        
-        
+
+
     

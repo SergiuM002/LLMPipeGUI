@@ -33,6 +33,15 @@ class ViewSessionsController:
             self.main_ctrl.add_session(new_session)
             self.view.show_session(new_session)
             
+    def reload_sessions(self):
+        for session_view in self.main_ctrl.sessions:
+            session_view.after_idle(session_view.destroy)
+            
+        self.main_ctrl.sessions = []
+        self.main_ctrl.session_ctrls = []
+        
+        self.load_sessions()
+            
     def add_session(self, session_name, align, model_selection, window_size_selection, sequence_count):
         new_ctrl = SessionTabController(
             main_ctrl=self.main_ctrl, 
@@ -66,5 +75,6 @@ class ViewSessionsController:
         LoginWindow(LoginWindowController(self.main_ctrl), view)
         
     def update_sessions_on_login(self):
+        self.main_ctrl.sync_sessions()
         self.main_ctrl.update_sessions_on_login()
 

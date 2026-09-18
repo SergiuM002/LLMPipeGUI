@@ -12,6 +12,9 @@ from controllers.ssh_controller import SSHController
 import config.environment as env
 from config.fonts import Fonts
 from ui.error_popup import ErrorPopup
+from collections import defaultdict
+from pathlib import Path
+import re
 
 class MainController:
     def __init__(self):
@@ -310,6 +313,69 @@ class MainController:
                 else:
                     print(err)
                     ErrorPopup(self.root, err)
+                    
+    def sync_sessions(self):
+        # Get finished sessions paths
+        paths = self.ssh_controller.get_finished_remote_paths()  
+        
+        # Group files by their parent directory (session name)
+        dir_files = defaultdict(list)
+        for filepath in paths.splitlines():
+            p = Path(filepath)
+            dir_files[p.parent.name].append(p.name)
+            
+        session_dicts = []
+        for session_name, files in dir_files.items():
+            # Validate expected file contents
+            has_scores = f"{session_name}_scores_table0.csv" in files
+            has_file_ids = "fileIDs.txt" in files
+            
+            if has_scores and has_file_ids:
+                # There should be a csv file per sequence (minus 1 because of fileIDs.txt)
+                sequence_count = len(files) - 1
+                session_dicts.append(
+                    {
+                        "server": self.server,
+                        "user": self.user,
+                        "name": session_name,
+                        "sequence_count": sequence_count,
+                        "sequence_progress": sequence_count,
+                        "progress": 1, 
+                    }
+                )
+            
+        # Get running sessions info
+        raw_output = self.ssh_controller.get_running_remote_sessions_info()
+        
+        for line in raw_output.splitlines():
+            if not line.strip():
+                continue
+            
+            # Parse the structured "|"-delimited result
+            parts = line.split("|", 3)
+            if len(parts) < 4:
+                continue
+            
+            session_name, sequence_count, sequence_progress, last_log = parts[0], parts[1], parts[2], parts[3]
+        
+            match = re.search(r"Processing windows:\s*(\d+)%", last_log)
+            progress = int(match.group(1)) if match else 0
+
+            session_dicts.append(
+                {
+                    "server": self.server,
+                    "user": self.user,
+                    "name": session_name,
+                    "sequence_count": int(sequence_count or 1),
+                    "sequence_progress": int(sequence_progress) + 1 or 1,
+                    "progress": progress/100,
+                }
+            )
+            
+        with open(env.SESSIONS_FILE, mode="w", encoding="utf-8") as file:
+            json.dump(session_dicts, file)
+            
+        self.view_sessions_ctrl.reload_sessions()
                     
         
     def on_closing(self):
