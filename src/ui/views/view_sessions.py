@@ -45,11 +45,25 @@ class ViewSessions(ctk.CTkFrame):
         )
         self.login_button.pack(side=ctk.RIGHT, padx=(0, 15))
         
-        self.divider = ctk.CTkFrame(self,fg_color=("gray80", "#444444"), height=2)
+        self.divider = ctk.CTkFrame(self, fg_color=("gray80", "#444444"), height=3)
         self.divider.pack(fill="x", padx=15, pady=20)
         
         self.scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self.scroll_frame.pack(fill="both", expand=True)
+        
+        self.refresh_button = ctk.CTkButton(
+            self.scroll_frame,
+            height=25,
+            width=25, 
+            text="\uf021", 
+            font=("FontAwesome", 17),
+            fg_color=Theme.GRAY_BUTTON,
+            text_color=Theme.GRAY_BUTTON_TEXT,
+            hover_color=Theme.GRAY_BUTTON_HOVER,
+            command=controller.refresh_sessions,
+            state="disabled"
+        )
+        self.refresh_button.pack(anchor=ctk.W, padx=20)
         
         self.controller.connect_view(self)
         self.controller.load_sessions()
@@ -63,6 +77,7 @@ class ViewSessions(ctk.CTkFrame):
             
         self.login_label.update()
         self.login_button.configure(state="disabled")
+        self.refresh_button.configure(state="normal")
         
         self.controller.update_sessions_on_login()
                 

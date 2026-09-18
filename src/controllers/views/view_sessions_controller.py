@@ -41,6 +41,10 @@ class ViewSessionsController:
         self.main_ctrl.session_ctrls = []
         
         self.load_sessions()
+        
+    def refresh_sessions(self):
+        self.main_ctrl.sync_sessions()
+        self.main_ctrl.update_sessions_on_login()
             
     def add_session(self, session_name, align, model_selection, window_size_selection, sequence_count):
         new_ctrl = SessionTabController(
