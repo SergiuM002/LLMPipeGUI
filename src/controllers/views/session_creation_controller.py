@@ -96,9 +96,20 @@ class CreateSessionController:
             os.remove(self.final_file)
         
     def start_session(self, view):
-        with open(self.file_path, "r") as file:
-            sequence_count = sum(1 for line in file if line.startswith(">"))
+        out, err, exit_code = self.main_ctrl.ssh_controller.execute_command("pwd")
+                    
+        if exit_code != 0:
+            print(err)
+            view.show_error_popup(err)
+            return
         
+        home_dir = out.strip()
+        
+        sequence_count = 0
+        for line in self.main_ctrl.ssh_controller.open_line_by_line(f"{home_dir}/LLMPipe/{view.output_text.get()}.fa"):
+            if line.startswith(">"):
+                sequence_count += 1
+
         self.main_ctrl.view_sessions_ctrl.add_session(
             session_name=view.output_text.get(), 
             align=view.align_state.get(), 

@@ -74,3 +74,7 @@ class SSHController:
         self.ssh_client.connect(hostname=hostname, username=username, password=password, timeout=5)
         self.sftp_client = self.ssh_client.open_sftp()
 
+    def open_line_by_line(self, remote_path):
+        with self.sftp_client.open(remote_path, "r") as remote_file:
+            for line in remote_file:
+                yield line
