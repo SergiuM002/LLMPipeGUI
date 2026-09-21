@@ -88,7 +88,7 @@ class SSHController:
                 
     def get_finished_remote_paths(self):
         """Get the finished (or partially finished) remote paths."""
-        cmd = "find ~/LLMPipe/results -mindepth 2 -maxdepth 2 -type f"
+        cmd = "find ~/LLMPipe/results -mindepth 2 -maxdepth 2 -type f | sort"
         return self.execute_command(cmd)[0] or ""
         
     def get_running_remote_sessions_info(self):

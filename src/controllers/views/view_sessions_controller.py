@@ -13,6 +13,7 @@ class ViewSessionsController:
     
     def load_sessions(self):
         self.main_ctrl.load_sessions_info()
+        new_sessions = []
         
         for session_info in self.main_ctrl.sessions_info:
             new_ctrl = SessionTabController(
@@ -28,18 +29,21 @@ class ViewSessionsController:
                 controller=new_ctrl,
                 master=self.view.scroll_frame, 
             )
+            new_sessions.append(new_session)
             
             self.main_ctrl.add_session_ctrl(new_ctrl)
             self.main_ctrl.add_session(new_session)
+        
+        for new_session in new_sessions:
             self.view.show_session(new_session)
             
     def reload_sessions(self):
         for session_view in self.main_ctrl.sessions:
             session_view.after_idle(session_view.delete_self)
-            
+
         self.main_ctrl.sessions = []
         self.main_ctrl.session_ctrls = []
-        
+    
         self.load_sessions()
         
     def refresh_sessions(self):
@@ -79,6 +83,5 @@ class ViewSessionsController:
         LoginWindow(LoginWindowController(self.main_ctrl), view)
         
     def update_sessions_on_login(self):
-        self.main_ctrl.sync_sessions()
         self.main_ctrl.update_sessions_on_login()
 

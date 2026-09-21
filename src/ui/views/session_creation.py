@@ -197,6 +197,10 @@ class CreateSession(ctk.CTkFrame):
     def start_button_clicked(self):
         self.controller.start_process(self)
         
+    def show_syncing_start(self):
+        self.progress_text.set("syncing...")
+        self.progress_label.update()   
+        
     def show_filtering_start(self):
         self.progress_text.set("filtering...")
         self.progress_label.update()

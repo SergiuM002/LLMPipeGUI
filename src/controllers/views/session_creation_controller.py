@@ -33,7 +33,8 @@ class CreateSessionController:
             view.show_start_error(msg) 
             return
         
-        self.main_ctrl.sync_sessions()
+        view.show_syncing_start()
+        self.main_ctrl.view_sessions_ctrl.refresh_sessions()
         
         if self.session_exists(view.output_text.get()):
             view.show_session_exists_error()

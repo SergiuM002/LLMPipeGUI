@@ -53,10 +53,9 @@ class ViewSessions(ctk.CTkFrame):
         
         self.refresh_button = ctk.CTkButton(
             self.scroll_frame,
-            height=25,
-            width=25, 
-            text="\uf021", 
-            font=("FontAwesome", 17),
+            height=30,
+            text="Sync Sessions", 
+            font=("Roboto", 15),
             fg_color=Theme.GRAY_BUTTON,
             text_color=Theme.GRAY_BUTTON_TEXT,
             hover_color=Theme.GRAY_BUTTON_HOVER,

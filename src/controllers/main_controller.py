@@ -315,6 +315,14 @@ class MainController:
                     ErrorPopup(self.root, err)
                     
     def sync_sessions(self):
+        session_dicts = self._get_finished_sessions() + self._get_remote_sessions()
+            
+        with open(env.SESSIONS_FILE, mode="w", encoding="utf-8") as file:
+            json.dump(session_dicts, file)
+            
+        self.view_sessions_ctrl.reload_sessions()
+        
+    def _get_finished_sessions(self):
         # Get finished sessions paths
         paths = self.ssh_controller.get_finished_remote_paths()  
         
@@ -335,22 +343,28 @@ class MainController:
             has_scores = f"{session_name}_scores_table0.csv" in files
             has_file_ids = "fileIDs.txt" in files
             
-            if has_scores and has_file_ids:
-                # There should be a csv file per sequence (minus 1 because of fileIDs.txt)
-                sequence_count = len(files) - 1
-                session_dicts.append(
-                    {
-                        "server": self.server,
-                        "user": self.user,
-                        "name": session_name,
-                        "sequence_count": sequence_count,
-                        "sequence_progress": sequence_count,
-                        "progress": 1, 
-                    }
-                )
+            # There should be a csv file per sequence (minus 1 because of fileIDs.txt)
+            if not has_scores or not has_file_ids:
+                continue
+                
+            sequence_count = len(files) - 1
+            session_dicts.append(
+                {
+                    "server": self.server,
+                    "user": self.user,
+                    "name": session_name,
+                    "sequence_count": sequence_count,
+                    "sequence_progress": sequence_count,
+                    "progress": 1, 
+                }
+            )   
             
+        return session_dicts
+    
+    def _get_remote_sessions(self):
         # Get running sessions info
         raw_output = self.ssh_controller.get_running_remote_sessions_info()
+        session_dicts = []
         
         for line in raw_output.splitlines():
             if not line.strip():
@@ -375,14 +389,10 @@ class MainController:
                     "sequence_progress": int(sequence_progress) + 1 or 1,
                     "progress": progress/100,
                 }
-            )
-            
-        with open(env.SESSIONS_FILE, mode="w", encoding="utf-8") as file:
-            json.dump(session_dicts, file)
-            
-        self.view_sessions_ctrl.reload_sessions()
-                    
+            )   
         
+        return session_dicts
+                    
     def on_closing(self):
         self.save_sessions()
         self.ssh_controller.close_clients()
