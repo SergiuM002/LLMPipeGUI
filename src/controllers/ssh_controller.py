@@ -73,6 +73,13 @@ class SSHController:
 
         self.ssh_client.connect(hostname=hostname, username=username, password=password, timeout=5)
         self.sftp_client = self.ssh_client.open_sftp()
+        
+    def get_tmux_sessions(self):
+        tmux_sessions, _, exit_code = self.execute_command('tmux ls -F "#{session_name}"')
+        if exit_code != 0 or tmux_sessions == "":
+            return ""
+                
+        return tmux_sessions.splitlines()
 
     def open_line_by_line(self, remote_path):
         with self.sftp_client.open(remote_path, "r") as remote_file:
@@ -80,17 +87,14 @@ class SSHController:
                 yield line
                 
     def get_finished_remote_paths(self):
+        """Get the finished (or partially finished) remote paths."""
         cmd = "find ~/LLMPipe/results -mindepth 2 -maxdepth 2 -type f"
         return self.execute_command(cmd)[0] or ""
         
     def get_running_remote_sessions_info(self):
         """Get the running remote sessions."""   
         # Get active tmux sessions
-        tmux_sessions, _, exit_code = self.execute_command('tmux ls -F "#{session_name}"')
-        if exit_code != 0 or tmux_sessions == "":
-            return ""
-        
-        tmux_sessions = tmux_sessions.splitlines()
+        tmux_sessions = self.get_tmux_sessions()
             
         # Batch count and log inspections for ALL tmux sessions into 1 compound shell command
         cmd_parts = []

@@ -318,11 +318,16 @@ class MainController:
         # Get finished sessions paths
         paths = self.ssh_controller.get_finished_remote_paths()  
         
+        # Get tmux sessions
+        tmux_sessions = self.ssh_controller.get_tmux_sessions()
+        
         # Group files by their parent directory (session name)
         dir_files = defaultdict(list)
         for filepath in paths.splitlines():
             p = Path(filepath)
-            dir_files[p.parent.name].append(p.name)
+            # Filter out partially finished sessions to avoid duplicates
+            if p.parent.name not in tmux_sessions:
+                dir_files[p.parent.name].append(p.name)
             
         session_dicts = []
         for session_name, files in dir_files.items():
