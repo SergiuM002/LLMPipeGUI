@@ -172,11 +172,13 @@ class CreateSessionController:
                         parts = line.split(">")
                         if len(parts) > 1:
                             content = parts[1].strip()
+                            header_elements_orig = delimiter_pattern.split(content)
                             header_elements = delimiter_pattern.split(content.upper())
                             
-                            for element in header_elements:
+                            
+                            for element, orig_element in zip(header_elements, header_elements_orig):
                                 if search_term in element:
-                                    search_hits.add(element) 
+                                    search_hits.add(orig_element) 
                                     
             # Another check for a new search before updating the GUI
             if search_id != self.search_countrer:
