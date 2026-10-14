@@ -325,7 +325,9 @@ def install():
         print(f"STDERR: {error_msg}")
         
     stdin, stdout, stderr = root.client.exec_command(
-        f"{ENV_PIP} install --quiet git+https://github.com/SilvanCodes/gpn.git"
+        "echo -e 'torch==2.3.1\ntorchvision==0.18.1\ntorchaudio==2.3.1\ntransformers==4.40.0' > constraints.txt && "
+        f"{ENV_PIP} install git+https://github.com/SilvanCodes/gpn.git -c constraints.txt && "
+        "rm constraints.txt"
     )
     exit_status = stdout.channel.recv_exit_status()
     if exit_status == 0:
