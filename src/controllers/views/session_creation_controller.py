@@ -188,7 +188,13 @@ class CreateSessionController:
                     
         except Exception as e:
             print(f"Error searching file: {e}")
-                                
+            
+    def set_context_size_options(self, view):
+        match view.model_selection.get():
+            case "PlantCaduceus1":
+                view.window_size_listbox.configure(values=view.window_size_options_pc1)
+            case _:
+                view.window_size_listbox.configure(values=view.window_size_options_pc2)   
 
 
     

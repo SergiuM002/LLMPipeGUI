@@ -135,6 +135,7 @@ class CreateSession(ctk.CTkFrame):
         self.model_frame.pack(side=ctk.LEFT, padx=(20, 0))
 
         self.model_selection = ctk.StringVar(self.model_frame, "PlantCaduceus1")
+        self.model_selection.trace_add("write", lambda *args: controller.set_context_size_options(self))
         model_options = ["PlantCaduceus2-Small", "PlantCaduceus2-Medium", "PlantCaduceus2-Large", "PlantCaduceus1", "Caduceus"]
         self.model_listbox = ctk.CTkComboBox(
             self.model_frame, 
@@ -149,14 +150,15 @@ class CreateSession(ctk.CTkFrame):
         self.model_listbox.pack()
         
         self.window_size_selection = ctk.StringVar(self.model_frame, "512bp")
-        window_size_options = ["512bp", "1024bp", "2048bp", "4096bp", "8192bp"]
+        self.window_size_options_pc1 = ["512bp"]
+        self.window_size_options_pc2 = ["512bp", "1024bp", "2048bp", "4096bp", "8192bp"]
         self.window_size_listbox = ctk.CTkComboBox(
             self.model_frame, 
             height=30, 
             width=90,
             state="readonly", 
             variable=self.window_size_selection, 
-            values=window_size_options,
+            values=self.window_size_options_pc1,
             font=("Roboto", 13),
             text_color=Theme.GENERAL_LABEL
         )
