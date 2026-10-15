@@ -1,5 +1,7 @@
 import paramiko
 import socket
+from pathlib import Path
+import stat
 
 class SSHController:
     # Custom exception for when remote commands return a non-zero code
@@ -27,14 +29,24 @@ class SSHController:
         except (paramiko.SSHException, OSError) as e:
             raise RuntimeError(f"Failed to transfer file to {remote_path}: {e}") from e
         
-    def retrieve_file(self, remote_path, local_path):
-        if not self.sftp_client:
-            raise RuntimeError("Error: SFTP client is not connected.")
-                
-        try:
-            self.sftp_client.get(remote_path, local_path)
-        except (paramiko.SSHException, OSError) as e:
-            raise RuntimeError(f"Failed to retrieve file from {remote_path}: {e}") from e
+    def download_dir(self,  remote_path: str, local_path: str):
+        """Recursively download a remote directory."""
+        Path(local_path).parent.mkdir(parents=True, exist_ok=True)
+        
+        self._recursive_sftp_get(self.sftp_client, remote_path, local_path)
+            
+    def _recursive_sftp_get(self, sftp, remote_dir: str, local_dir: str):    
+        Path(local_dir).mkdir(parents=True, exist_ok=True)
+
+        for attr in sftp.listdir_attr(remote_dir):
+            remote_path = f"{remote_dir}/{attr.filename}"
+            local_path = Path(local_dir) / attr.filename
+            
+            # Check if remote_path is a directory
+            if stat.S_ISDIR(attr.st_mode):
+                self._recursive_sftp_get(sftp, remote_path, local_path)
+            else:
+                sftp.get(remote_path, local_path)
         
     def execute_command(self, command):
         out, err = "", ""
@@ -76,8 +88,8 @@ class SSHController:
         
     def get_tmux_sessions(self):
         tmux_sessions, _, exit_code = self.execute_command('tmux ls -F "#{session_name}"')
-        if exit_code != 0 or tmux_sessions == "":
-            return ""
+        if exit_code != 0 or not tmux_sessions:
+            return []
                 
         return tmux_sessions.splitlines()
 
@@ -85,16 +97,19 @@ class SSHController:
         with self.sftp_client.open(remote_path, "r") as remote_file:
             for line in remote_file:
                 yield line
-                
+                                
     def get_finished_remote_paths(self):
         """Get the finished (or partially finished) remote paths."""
         cmd = "find ~/LLMPipe/results -mindepth 2 -maxdepth 2 -type f | sort"
         return self.execute_command(cmd)[0] or ""
         
-    def get_running_remote_sessions_info(self):
+    def get_running_remote_sessions_info(self, tmux_sessions=None):
         """Get the running remote sessions."""   
         # Get active tmux sessions
-        tmux_sessions = self.get_tmux_sessions()
+        if tmux_sessions is None:
+            tmux_sessions = self.get_tmux_sessions()
+        if not tmux_sessions:
+            return ""
             
         # Batch count and log inspections for ALL tmux sessions into 1 compound shell command
         cmd_parts = []

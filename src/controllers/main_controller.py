@@ -1,4 +1,3 @@
-import json
 import customtkinter as ctk
 from tkinter import font as tkfont
 from screeninfo import get_monitors
@@ -9,12 +8,13 @@ from controllers.views.session_creation_controller import CreateSessionControlle
 from controllers.views.opening_screen_controller import OpeningScreenController 
 from controllers.views.view_sessions_controller import ViewSessionsController 
 from controllers.ssh_controller import SSHController
-import config.environment as env
+import controllers.json_controller as json_controller
 from config.fonts import Fonts
 from ui.error_popup import ErrorPopup
 from collections import defaultdict
 from pathlib import Path
 import re
+import shlex
 
 class MainController:
     def __init__(self):
@@ -55,7 +55,16 @@ class MainController:
         
         self.session_ctrls = []
         self.sessions = []
-        self.sessions_info = []
+        
+        self.all_sessions_info = json_controller.load_all_sessions_info()
+        self.all_sessions_info.sort(
+            key=lambda info: (
+                info["user"] != self.user,
+                info["user"],
+                self._natural_sort_key(info["name"]),
+            )
+        )
+        self.synced_sessions_info = []
         
         self.root.after(200, self.resize_window, self.root, self.current_monitor)
         
@@ -245,28 +254,6 @@ class MainController:
     def show_new_project_screen(self): 
         self.create_session_view.tkraise()
         
-    def load_sessions_info(self):
-        try:
-            with open(env.SESSIONS_FILE, mode="r", encoding="utf-8") as file:
-                try:
-                    self.sessions_info = json.load(file)
-                except json.decoder.JSONDecodeError:
-                    self.sessions_info = []
-                    return  
-        except FileNotFoundError:
-            self.sessions_info = []
-            return
-        
-    def add_session_info(self, new_entry):
-        if new_entry not in self.sessions_info:
-            self.sessions_info.append(new_entry)
-        self.save_sessions()
-            
-    def remove_session_info(self, entry_name):
-        session_info_to_remove = next((session for session in self.sessions_info if session["name"] == entry_name), None)
-        self.sessions_info.remove(session_info_to_remove)
-        self.save_sessions()
-        
     def add_session_ctrl(self, new_ctrl):
         if new_ctrl not in self.session_ctrls:
             self.session_ctrls.append(new_ctrl)
@@ -280,62 +267,158 @@ class MainController:
         
     def remove_session(self, session):
         self.sessions.remove(session)
+        
+    def add_session_info(self, session_info):
+        existing_keys_all = {
+            (s["name"], s["user"], s["server"]) for s in self.all_sessions_info
+        }
+        existing_keys_synced = {
+            (s["name"], s["user"], s["server"]) for s in self.synced_sessions_info
+        }
 
-    # Save sessions to json file
-    def save_sessions(self):
-        session_map = {s.session_name: s for s in self.session_ctrls}
-        
-        for session_info in self.sessions_info:
-            name = session_info["name"]
-            if name in session_map:
-                session = session_map[name]
-                session_info["sequence_progress"] = session.sequence_progress
-                session_info["progress"] = session.progress
-        
-        with open(env.SESSIONS_FILE, mode="w", encoding="utf-8") as file:
-            json.dump(self.sessions_info, file)
+        key = (
+            session_info["name"],
+            session_info["user"],
+            session_info["server"],
+        )
+
+        if key not in existing_keys_all:
+            self.all_sessions_info.append(session_info)
+        if key not in existing_keys_synced:
+            self.synced_sessions_info.append(session_info)
+            
+        self.sort_sessions_info()
+            
+    def sort_sessions_info(self):
+        self.all_sessions_info.sort(
+            key=lambda info: (
+                info["user"] != self.user,
+                info["user"],
+                self._natural_sort_key(info["name"]),
+            )
+        )
+        self.synced_sessions_info.sort(
+            key=lambda info: self._natural_sort_key(info["name"])
+        )
+
+    @staticmethod
+    def _natural_sort_key(value):
+        return tuple(
+            (1, int(part)) if part.isdigit() else (0, part.casefold())
+            for part in re.split(r"(\d+)", value)
+        )
+            
+    def remove_session_info(self, session_name):
+        self.synced_sessions_info = [
+            session_info
+            for session_info in self.synced_sessions_info
+            if session_info["name"] != session_name
+        ]
+        self.all_sessions_info = [
+            session_info
+            for session_info in self.all_sessions_info
+            if session_info["name"] != session_name or session_info["server"] != self.server or session_info["user"] != self.user
+        ]
             
     def update_sessions_on_login(self):
-        for i in range(len(self.session_ctrls)):
-            if self.session_ctrls[i].server == self.server and self.session_ctrls[i].user == self.user:        
-                self.sessions[i].on_login_config()
+        current_sessions = [
+            (session, controller)
+            for session, controller in zip(self.sessions, self.session_ctrls)
+            if controller.server == self.server and controller.user == self.user
+        ]
+        if not current_sessions:
+            return
+
+        session_names = " ".join(
+            shlex.quote(controller.session_name)
+            for _, controller in current_sessions
+        )
+        command = (
+            f"for session_name in {session_names}; do "
+            'if [ -f "$HOME/LLMPipe/$session_name.log" ]; then '
+            'printf "%s\\n" "$session_name"; '
+            "fi; done"
+        )
+        running_logs, err, error_code = self.ssh_controller.execute_command(command)
+        if error_code != 0:
+            print(err)
+            ErrorPopup(self.root, err)
+            return
+
+        running_session_names = set(running_logs.splitlines())
+        for session, controller in current_sessions:
+            session.on_login_config()
+
+            if controller.session_name in running_session_names:
+                _, stdout, _ = self.ssh_controller.ssh_client.exec_command(
+                    f"tail -f ~/LLMPipe/{shlex.quote(controller.session_name)}.log"
+                )
+                controller.resume_progress_updates(
+                    session, stdout, controller.sequence_progress
+                )
+            else:
+                controller.progress = 1
+                controller.sequence_progress = controller.sequence_count
+                controller.finished = True
+                session.update_finished_progress()
                     
-                # Resume progress updates
-                _, err, error_code = self.ssh_controller.execute_command(f"[ -f ~/LLMPipe/{self.session_ctrls[i].session_name}.log ]")
-                
-                if error_code == 0: 
-                    _, stdout, _ = self.ssh_controller.ssh_client.exec_command(f"tail -f ~/LLMPipe/{self.session_ctrls[i].session_name}.log")  
-                    self.session_ctrls[i].resume_progress_updates(self.sessions[i], stdout, self.session_ctrls[i].sequence_progress)
-                elif error_code > 0:
-                    self.session_ctrls[i].progress = 1
-                    self.session_ctrls[i].sequence_progress = self.session_ctrls[i].sequence_count
-                    self.sessions[i].update_finished_progress()   
-                else:
-                    print(err)
-                    ErrorPopup(self.root, err)
-                    
+    def save_sessions(self):
+        if not self.server or not self.user:
+            return
+
+        session_map = {
+            (controller.server, controller.user, controller.session_name): controller
+            for controller in self.session_ctrls
+        }
+
+        for session_info in self.synced_sessions_info:
+            session = session_map.get(
+                (self.server, self.user, session_info["name"])
+            )
+            if session is not None:
+                session_info["sequence_progress"] = session.sequence_progress
+                session_info["progress"] = session.progress
+
+        json_controller.save_sessions_info(
+            hostname=self.server,
+            username=self.user,
+            sessions_info=self.synced_sessions_info
+        )
+       
     def sync_sessions(self):
-        session_dicts = self._get_finished_sessions() + self._get_remote_sessions()
-            
-        with open(env.SESSIONS_FILE, mode="w", encoding="utf-8") as file:
-            json.dump(session_dicts, file)
-            
-        self.view_sessions_ctrl.reload_sessions()
+        tmux_sessions = self.ssh_controller.get_tmux_sessions()
+        new_synced_sessions_info = (
+            self._get_finished_sessions(tmux_sessions)
+            + self._get_remote_sessions(tmux_sessions)
+        )
         
-    def _get_finished_sessions(self):
+        for session_info in new_synced_sessions_info:
+           self.add_session_info(session_info)
+        
+        self.sort_sessions_info()
+        
+        for view, controller in list(zip(self.sessions, self.session_ctrls)):
+            if (
+                controller.session_name not in [info["name"] for info in self.synced_sessions_info]
+                and controller.server == self.server
+                and controller.user == self.user
+            ):
+                view.after_idle(view.delete_self)
+                self.remove_session(view)
+                self.remove_session_ctrl(controller)
+        
+    def _get_finished_sessions(self, tmux_sessions):
         # Get finished sessions paths
         paths = self.ssh_controller.get_finished_remote_paths()  
-        
-        # Get tmux sessions
-        tmux_sessions = self.ssh_controller.get_tmux_sessions()
+        running_sessions = set(tmux_sessions)
         
         # Group files by their parent directory (session name)
-        dir_files = defaultdict(list)
+        dir_files = defaultdict(set)
         for filepath in paths.splitlines():
             p = Path(filepath)
             # Filter out partially finished sessions to avoid duplicates
-            if p.parent.name not in tmux_sessions:
-                dir_files[p.parent.name].append(p.name)
+            if p.parent.name not in running_sessions:
+                dir_files[p.parent.name].add(p.name)
             
         session_dicts = []
         for session_name, files in dir_files.items():
@@ -356,14 +439,15 @@ class MainController:
                     "sequence_count": sequence_count,
                     "sequence_progress": sequence_count,
                     "progress": 1, 
+                    "finished": True
                 }
             )   
             
         return session_dicts
     
-    def _get_remote_sessions(self):
+    def _get_remote_sessions(self, tmux_sessions):
         # Get running sessions info
-        raw_output = self.ssh_controller.get_running_remote_sessions_info()
+        raw_output = self.ssh_controller.get_running_remote_sessions_info(tmux_sessions)
         session_dicts = []
         
         for line in raw_output.splitlines():
@@ -388,6 +472,7 @@ class MainController:
                     "sequence_count": int(sequence_count or 1),
                     "sequence_progress": int(sequence_progress) + 1 or 1,
                     "progress": progress/100,
+                    "finished": False
                 }
             )   
         

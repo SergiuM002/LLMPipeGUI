@@ -1,7 +1,7 @@
-import subprocess
-import config.environment as env
 import threading
 import re
+import os
+import controllers.json_controller as json_controller
 
 class SessionTabController:
     def __init__(
@@ -10,6 +10,7 @@ class SessionTabController:
         sequence_count, 
         server,
         user,
+        finished=False,
         align=None, 
         model_selection=None, 
         window_size_selection=None, 
@@ -27,6 +28,7 @@ class SessionTabController:
         self.sequence_progress = sequence_progress
         self.server = server
         self.user = user
+        self.finished = finished
         
         self.stop_event = None
         
@@ -183,6 +185,7 @@ class SessionTabController:
                     buffer = updates[-1]
         
             if "Script finished." in buffer:
+                self.finished = True
                 self.stop_event.set()
                 self.main_ctrl.root.after(
                     0, 
@@ -193,42 +196,27 @@ class SessionTabController:
 
                 
     def get_files(self, view, output_path):
-        _, err, exit_code = self.main_ctrl.ssh_controller.execute_command(
-            f"tar -czf ~/LLMPipe/result.tar.gz -C ~/LLMPipe/results/{self.session_name} ."
-        )
-        
-        if exit_code == 0:
-            out, _, _ = self.main_ctrl.ssh_controller.execute_command("pwd")
-            home_dir = out.strip()
-            self.main_ctrl.ssh_controller.retrieve_file(f"{home_dir}/LLMPipe/result.tar.gz", f"{output_path}/{self.session_name}_results.tar.gz")
-            self.main_ctrl.ssh_controller.execute_command("rm ~/LLMPipe/result.tar.gz")
-        else:
-            print(err)
-            view.show_popup_error(err)
-            return
-        
-        command = (
-            f"cd '{output_path}' && "
-            f"mkdir {self.session_name}_results && "
-            f"tar -xf {self.session_name}_results.tar.gz -C {self.session_name}_results && "
-        )
-        
-        if env.OPERATING_SYSTEM == "Windows":
-            command += f"del {self.session_name}_results.tar.gz"
-        else:
-            command += f"rm {self.session_name}_results.tar.gz"
+        ssh_controller = self.main_ctrl.ssh_controller
+        local_path = f"{output_path}/{self.session_name}_results/"
+
+        if os.path.exists(local_path):
+            msg = f"The target folder already exists:\n{local_path}\nContinue and overwrite its contents?"
+            if view.get_confirmation(msg) != "Yes":
+                return
         
         try:
-            subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
-        except subprocess.CalledProcessError as e:
-            err_msg = e.stderr.strip() or f"Exit code {e.returncode}"
-            err = f"Command '{command}' failed: \n{err_msg}"
-            print(err)
-            view.show_popup_error(err)
-        except PermissionError as e:
-            err = f"Permission denied: {e}"
-            print(err)
-            view.show_popup_error(err)
+            ssh_controller.download_dir(
+                remote_path=f"LLMPipe/results/{self.session_name}/", 
+                local_path=local_path
+            )
+        except RuntimeError as e:
+            print(e)
+            view.show_popup_error(str(e))
+            return
+        except FileNotFoundError as e:
+            print(f"Error: The remote directory for session '{self.session_name}' does not exist.")
+            view.show_popup_error(f"Error: The remote directory for session '{self.session_name}' does not exist.")
+            return
         
     def confirm_delete(self, view):
         finished = False
@@ -239,7 +227,7 @@ class SessionTabController:
         else:
             msg = "Are you sure?\nThis will terminate the running session."
             
-        if view.get_delete_confirmation(msg) == "Yes":
+        if view.get_confirmation(msg) == "Yes":
             self.delete_session(view, finished)
             
             
@@ -275,9 +263,13 @@ class SessionTabController:
                 view.show_popup_error(err)
                 return
         
+        json_controller.delete_session(self.server, self.user, self.session_name)
         self.main_ctrl.force_coordinate_update(view.master)
         self.cleanup(view)        
         view.delete_self()
+        
+    def logged_in_to_server_with_user(self, server, user):
+        return server == self.main_ctrl.server and user == self.main_ctrl.user
         
     def cleanup(self, view):
         self.main_ctrl.remove_session_ctrl(self)
@@ -286,5 +278,7 @@ class SessionTabController:
         
         self.view = None
         self.main_ctrl = None
+        
+    
 
             

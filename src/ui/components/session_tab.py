@@ -20,8 +20,15 @@ class SessionTab(ctk.CTkFrame):
             self,
             fg_color="transparent"
         )
-        
         self.info_frame.pack(side=ctk.LEFT)
+        
+        self.username_server_label = ctk.CTkLabel(
+            self.info_frame,
+            text=f"{controller.user}@{controller.server}",
+            font=("Roboto", 14),
+            text_color=("gray20", "white")
+        )
+        self.username_server_label.pack(anchor=ctk.W, padx=20, pady=(10, 0))
         
         self.project_label = ctk.CTkLabel(
             self.info_frame,
@@ -29,14 +36,12 @@ class SessionTab(ctk.CTkFrame):
             font=("Roboto", 18),
             text_color=("gray20", "white")
         )
-        
-        self.project_label.pack(anchor=ctk.W, padx=20, pady=(20, 0))
+        self.project_label.pack(anchor=ctk.W, padx=20, pady=(10, 0))
         
         self.progress_frame = ctk.CTkFrame(
             self.info_frame,
             fg_color="transparent"
         )
-        
         self.progress_frame.pack(side=ctk.LEFT, padx=20, pady=20)
               
         self.progress_bar = ctk.CTkProgressBar(
@@ -70,6 +75,8 @@ class SessionTab(ctk.CTkFrame):
         )    
         self.button_frame.pack(side=ctk.RIGHT, padx=20, pady=20)
         
+        logged_in = controller.logged_in_to_server_with_user(self.controller.server, self.controller.user)
+        
         self.get_file_button = ctk.CTkButton(
             self.button_frame,
             text="Get Files",
@@ -77,7 +84,7 @@ class SessionTab(ctk.CTkFrame):
             text_color=Theme.GREEN_BUTTON_TEXT,
             fg_color=Theme.GREEN_BUTTON,
             hover_color=Theme.GREEN_BUTTON_HOVER,
-            state="disabled",
+            state="normal" if logged_in else "disabled",
             command=self.get_file_button_clicked
         )
         
@@ -90,7 +97,7 @@ class SessionTab(ctk.CTkFrame):
             fg_color=Theme.GRAY_BUTTON,
             text_color=Theme.GRAY_BUTTON_TEXT,
             hover_color=Theme.GRAY_BUTTON_HOVER,
-            state="disabled",
+            state="normal" if logged_in else "disabled",
             command=self.delete_button_clicked
         )
         
@@ -145,8 +152,8 @@ class SessionTab(ctk.CTkFrame):
         self.progress_label.update()
         
     def update_finished_progress(self):
-        self.time_remaining_label.destroy()
-        self.progress_bar.destroy() 
+        self.time_remaining_label.pack_forget()
+        self.progress_bar.pack_forget() 
         self.progress_text.set("done.")
         self.get_file_button.configure(state="normal")
         self.progress_label.update()
@@ -176,7 +183,7 @@ class SessionTab(ctk.CTkFrame):
     def delete_button_clicked(self):
         self.controller.confirm_delete(self)
             
-    def get_delete_confirmation(self, message):
+    def get_confirmation(self, message):
         scaling = self.controller.main_ctrl.height_quo
         msg_box = CTkMessagebox(
             master=self.controller.main_ctrl.root,
@@ -194,6 +201,7 @@ class SessionTab(ctk.CTkFrame):
         )
         
         return msg_box.get()
+
     
     def show_popup_error(self, message):
         ErrorPopup(self.controller.main_ctrl.root, self.controller.main_ctrl.height_quo, message)

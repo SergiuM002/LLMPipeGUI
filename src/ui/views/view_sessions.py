@@ -45,14 +45,11 @@ class ViewSessions(ctk.CTkFrame):
         )
         self.login_button.pack(side=ctk.RIGHT, padx=(0, 15))
         
-        self.divider = ctk.CTkFrame(self, fg_color=("gray80", "#444444"), height=3)
-        self.divider.pack(fill="x", padx=15, pady=20)
-        
-        self.scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        self.scroll_frame.pack(fill="both", expand=True)
+        self.button_frame2 = ctk.CTkFrame(self, fg_color="transparent")
+        self.button_frame2.pack(fill="x", padx=20, pady=(20, 5))
         
         self.refresh_button = ctk.CTkButton(
-            self.scroll_frame,
+            self.button_frame2,
             height=30,
             text="Sync Sessions", 
             font=("Roboto", 15),
@@ -62,8 +59,26 @@ class ViewSessions(ctk.CTkFrame):
             command=controller.refresh_sessions,
             state="disabled"
         )
-        self.refresh_button.pack(anchor=ctk.W, padx=20)
+        self.refresh_button.pack(side=ctk.LEFT)
         
+        self.only_synced_checkbox = ctk.CTkCheckBox(
+            self.button_frame2,
+            text="Show only synced sessions",
+            font=("Roboto", 15),
+            checkbox_height=24,
+            checkbox_width=24,
+            fg_color=Theme.GREEN_BUTTON,
+            hover_color=Theme.GREEN_BUTTON_HOVER,
+            border_color=("gray45", "gray55"),
+            text_color=Theme.GENERAL_LABEL,
+            command=controller.toggle_only_synced,
+            state="disabled"
+        )
+        self.only_synced_checkbox.pack(side=ctk.LEFT, padx=10)
+        
+        self.scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        self.scroll_frame.pack(fill="both", expand=True)
+                
         self.controller.connect_view(self)
         self.controller.load_sessions()
         
@@ -77,8 +92,10 @@ class ViewSessions(ctk.CTkFrame):
         self.login_label.update()
         self.login_button.configure(state="disabled")
         self.refresh_button.configure(state="normal")
+        self.only_synced_checkbox.configure(state="normal")
         
-        self.controller.update_sessions_on_login()
+        self.controller.refresh_sessions()
+        
                 
     
         
