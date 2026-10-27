@@ -6,10 +6,12 @@ import config.environment as env
 import threading
 
 class LoginWindowController:
+    """Coordinates the login window."""
     def __init__(self, main_ctrl):
         self.main_ctrl = main_ctrl
         
     def autofill_saved_info(self, view):
+        """Autofills the server and username fields with the ones saved from the last login."""
         try:
             with open(env.LASTLOGIN_FILE, mode="r", encoding="utf-8") as file:
                 try:
@@ -23,6 +25,7 @@ class LoginWindowController:
             view.fill_saved_info(login_info)
         
     def confirm_login(self, view):
+        """Starts the login process."""
         if not view.server_entry.get() or not view.username_entry.get() or not view.password_entry.get():
             self.main_ctrl.root.after(0, view.show_fields_error_message_box)
             self.main_ctrl.root.after(0, view.enable_confirm_button)
@@ -36,6 +39,7 @@ class LoginWindowController:
         self.login_thread.start()        
                 
     def attempt_login(self, view, server, username, password):
+        """Tries to log in with the entered credentials."""
         login_info = ({
                     "server": server,
                     "username": username
@@ -71,5 +75,6 @@ class LoginWindowController:
             self.main_ctrl.root.after(0, view.enable_confirm_button)
         
     def clean_msg_box_bindings(self, event, view):
+        """Return the bindings to the state before the message box appeared."""
         if event.widget == view.msg_box:
             view.bind_all("<Return>", lambda e: view.confirm_button_clicked())

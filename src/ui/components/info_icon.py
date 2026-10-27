@@ -1,7 +1,12 @@
+"""A question-mark icon that shows an informational tooltip on hover."""
+
 import customtkinter as ctk
 
 class InfoIcon(ctk.CTkLabel):
+    """A label that displays a tooltip while the pointer is over it."""
+
     def __init__(self, master, message, **kwargs):
+        """Set up the icon and retain the message used by its tooltip."""
         super().__init__(master, 
                          text="?", 
                          width=20, 
@@ -20,10 +25,13 @@ class InfoIcon(ctk.CTkLabel):
  
 
     def show_tooltip(self, event=None):
+        """Create a tooltip positioned just to the right of the icon."""
+        # Position the tooltip relative to the icon's screen coordinates
         x, y, _, _ = self.bbox("insert")
         x += self.winfo_rootx() + 25
         y += self.winfo_rooty() + 5
 
+        # Remove the window decorations so the tooltip appears as a compact label
         self.tooltip = ctk.CTkToplevel(self)
         self.tooltip.wm_overrideredirect(True)  
         self.tooltip.wm_geometry(f"+{x}+{y}")
@@ -36,6 +44,7 @@ class InfoIcon(ctk.CTkLabel):
         label.pack()
 
     def hide_tooltip(self, event=None):
+        """Close the tooltip if one is currently visible."""
         if self.tooltip:
             self.tooltip.destroy()
             self.tooltip = None

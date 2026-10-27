@@ -11,7 +11,10 @@ from config.styles import Theme
 import config.environment as env
 
 class CreateSession(ctk.CTkFrame):
+    """View for importing a FASTA file and configuring a new session."""
+
     def __init__(self, controller, master, **kwargs):   
+        """Build the session-creation form and initialize its controls."""
         super().__init__(master, fg_color="transparent", **kwargs)
         self.master = master
         self.controller = controller
@@ -19,6 +22,7 @@ class CreateSession(ctk.CTkFrame):
         self.scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self.scroll_frame.pack(fill="both", expand=True)  
             
+        # File import and navigation controls
         self.button_frame1 = ctk.CTkFrame(
             self.scroll_frame,
             fg_color="transparent",
@@ -58,6 +62,7 @@ class CreateSession(ctk.CTkFrame):
         self.import_label = ctk.CTkLabel(self.scroll_frame, textvariable=self.import_text, font=("Roboto", 12), text_color=Theme.GENERAL_LABEL)
         self.import_label.pack(anchor=ctk.W, padx=50, pady=(5, 0))
 
+        # Search and selection area for filters found in the imported file
         self.filter_frame1 = ctk.CTkFrame(self.scroll_frame, fg_color="transparent", width=0, height=0)
         self.filter_frame1.pack(fill="x", padx=50)
 
@@ -75,6 +80,7 @@ class CreateSession(ctk.CTkFrame):
         )
         self.selected_list = ctk.CTkScrollableFrame(self.filter_frame1)
 
+        # Session settings and output name
         self.align_state = ctk.BooleanVar(value=True)
         self.align_checkbox = ctk.CTkCheckBox(
             self.scroll_frame, 
@@ -97,6 +103,7 @@ class CreateSession(ctk.CTkFrame):
         self.output_text = ctk.CTkEntry(self.scroll_frame, height=40, font=("Roboto", 18))
         self.output_text.pack(anchor=ctk.W, fill="x", padx=50, pady=(0, 15))
         
+        # Authentication and model/session launch controls
         self.button_frame2 = ctk.CTkFrame(self.scroll_frame, fg_color="transparent")
         self.button_frame2.pack(fill="x", pady=(100, 0))
 
@@ -164,16 +171,17 @@ class CreateSession(ctk.CTkFrame):
         )
         self.window_size_listbox.pack(anchor=ctk.W, pady=(10, 0))
 
-        self.progress_frame = ctk.CTkFrame(self.scroll_frame, fg_color="transparent")
-        self.progress_frame.pack(fill="x")
+        # Status text updated while the controller processes the session
 
-        self.progress_text = ctk.StringVar(self.progress_frame, "")
-        self.progress_label = ctk.CTkLabel(self.progress_frame, textvariable=self.progress_text, font=("Roboto", 13), text_color=Theme.GENERAL_LABEL)
-        self.progress_label.pack(side=ctk.LEFT, padx=(50, 10), pady=(15, 5))
+        self.progress_text = ctk.StringVar(self.scroll_frame, "")
+        self.progress_label = ctk.CTkLabel(self.scroll_frame, textvariable=self.progress_text, font=("Roboto", 13), text_color=Theme.GENERAL_LABEL)
+        self.progress_label.pack(anchor=ctk.W, padx=(50, 10), pady=(15, 5))
 
     def import_button_clicked(self):
+        """Open a platform-appropriate file picker and import its selection."""
         chosen_path = ""
         
+        # Linux uses Zenity; other platforms use Tk's native file dialog
         if env.OPERATING_SYSTEM == "Linux":
             try:
                 chosen_path = subprocess.check_output(
@@ -197,33 +205,41 @@ class CreateSession(ctk.CTkFrame):
         self.controller.import_file(self)
         
     def start_button_clicked(self):
+        """Ask the controller to start creating the configured session."""
         self.controller.start_process(self)
         
     def show_syncing_start(self):
+        """Display that remote data synchronization has started."""
         self.progress_text.set("syncing...")
         self.progress_label.update()   
         
     def show_filtering_start(self):
+        """Display that imported data filtering has started."""
         self.progress_text.set("filtering...")
         self.progress_label.update()
         
     def show_creating_session_start(self):
+        """Display that session creation has started."""
         self.progress_text.set("creating session...")
         self.progress_label.update()
         
     def show_creating_session_finish(self):
+        """Display successful completion of session creation."""
         self.progress_text.set("session created")
         self.progress_label.update()
         
     def show_session_exists_error(self):
+        """Display a message when the requested session already exists."""
         self.progress_text.set("Session already exists.")
         self.progress_label.update()
         
     def show_start_error(self, msg):
+        """Show an error popup for a failure while starting a session."""
         scaling = self.controller.main_ctrl.height_quo
         ErrorPopup(self.controller.main_ctrl.root, scaling, msg)
         
     def show_import_failure(self):
+        """Reset filter controls and mark the imported file as invalid."""
         self.filter_entry.delete(0, ctk.END)
         for widget in self.filter_frame1.winfo_children():
             widget.pack_forget()
@@ -233,9 +249,11 @@ class CreateSession(ctk.CTkFrame):
         self.import_text.set("uploaded file: (invalid file)")
         
     def show_error_popup(self, message):
+        """Show an error popup with the supplied message."""
         ErrorPopup(self.controller.main_ctrl.root, self.controller.main_ctrl.height_quo, str(message))
                 
     def show_general_import(self):    
+        """Refresh the filter-selection UI after a successful import."""
         self.import_text.set("uploaded file: "+self.controller.file_path) 
         for widget in self.filter_frame1.winfo_children():
             widget.pack_forget()
@@ -257,8 +275,8 @@ class CreateSession(ctk.CTkFrame):
         self.controller.main_ctrl.force_coordinate_update(self.scroll_frame)
         
             
-    # Update list of selected filters
     def select_filter(self, cb):
+        """Add or remove a filter label when its checkbox changes."""
         if cb.get() == 1:
             new_label = ctk.CTkLabel(self.selected_list, text=cb.cget("text"))
             self.controller.selected_labels.append(new_label)
@@ -270,11 +288,12 @@ class CreateSession(ctk.CTkFrame):
                     label.destroy()
                     self.controller.selected_labels.remove(label)
         
-    # Update filter options based on search
     def field_search(self, search_selection_list):       
+        """Request matching filter options from the controller."""
         self.controller.get_search_hits(self, search_selection_list)
     
     def display_search_results(self, search_selection_list, search_hits):   
+        """Populate search results and restore each selected checkbox."""
         if len(search_hits) > 50:
             search_selection_list.controller.load_new_options(list(search_hits)[:50], num_options=len(search_hits))  
         else:
@@ -289,13 +308,14 @@ class CreateSession(ctk.CTkFrame):
             
         self.filter_list.content_frame._parent_canvas.yview_moveto(0)
 
-    # Update widgets after login
     def update_login(self):
+        """Update the login indicator and disable the login button."""
         self.login_text.set("logged in ✓")
         self.login_label.update()
         self.login_button.configure(state="disabled")
 
     def back(self):
+        """Ask whether to save changes before leaving or resetting the form."""
         scaling = self.controller.main_ctrl.height_quo
         msg = CTkMessagebox(
             master=self.controller.main_ctrl.root,

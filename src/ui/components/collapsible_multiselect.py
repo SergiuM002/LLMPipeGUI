@@ -4,7 +4,15 @@ from ui.components.info_icon import InfoIcon
 from config.styles import Theme
 
 class CollapsibleMultiSelect(ctk.CTkFrame):
+    """Display a collapsible list of checkbox options supplied by a controller."""
+
     def __init__(self, controller, master, title, checkbox_size, content_height, **kwargs):
+        """
+        Create the widget and populate it with the controller's options.
+
+        ``checkbox_size`` scales checkbox dimensions and typography, while
+        ``content_height`` scales the scrollable area's height.
+        """
         super().__init__(master, fg_color="transparent", **kwargs)
         self.os_type = platform.system()
         self.checkbox_size = checkbox_size
@@ -14,7 +22,7 @@ class CollapsibleMultiSelect(ctk.CTkFrame):
         
         self.controller.connect_view(self)
         
-        # Toggle button
+        # Match the arrow shown on the toggle button to the controller state
         if self.controller.is_open:
             self.toggle_button = ctk.CTkButton(
                 self, text=f"▼ {title}", 
@@ -38,17 +46,18 @@ class CollapsibleMultiSelect(ctk.CTkFrame):
             
         self.toggle_button.pack(fill="x", expand=True)
 
-        # Scrollable container
+        # Keep options in a scrollable area
         self.content_frame = ctk.CTkScrollableFrame(self, height=250*content_height)
         if (self.controller.is_open):
             self.content_frame.pack(fill="both", expand=True, pady=(5, 0))
         
-        # Pack checkboxes (and infoboxes) for each option
+        # Let the controller create each option through ``pack_option``
         self.checkboxes = []
         self.option_frames = []
         self.controller.pack_options() 
         
     def pack_option(self, has_infoboxes, option, option_info):
+        """Add one checkbox option, optionally accompanied by an info icon."""
         option_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         option_frame.pack(fill="x", anchor="w")
         
@@ -72,6 +81,7 @@ class CollapsibleMultiSelect(ctk.CTkFrame):
         self.option_frames.append(option_frame)
         
     def pack_remaining_label(self, num_options):
+        """Show a label indicating that only the first 50 options are displayed."""
         self.rem_label = ctk.CTkLabel(
             self.content_frame,
             text=f"(showing 50 of {num_options})",
@@ -81,14 +91,17 @@ class CollapsibleMultiSelect(ctk.CTkFrame):
         self.rem_label.pack(pady=5, padx=10, anchor="w")
         
     def expand_list(self):
+        """Show the scrollable options and indicate the expanded state."""
         self.content_frame.pack(fill="both", expand=True, pady=(5, 0))
         self.toggle_button.configure(text=f"▼ {self.toggle_button.cget('text')[2:]}")   
         
     def collapse_list(self):
+        """Hide the scrollable options and indicate the collapsed state."""
         self.content_frame.pack_forget()
         self.toggle_button.configure(text=f"▶ {self.toggle_button.cget('text')[2:]}")
     
     def clean_old_options(self):
+        """Destroy existing option widgets and reset their tracked references."""
         for checkbox in self.checkboxes:
             checkbox.destroy()
         for option in self.option_frames:

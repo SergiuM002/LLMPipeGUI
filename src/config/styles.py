@@ -1,5 +1,5 @@
 class Theme:
-    # Colors
+    # Colors for different UI elements
     GRAY_BUTTON = ("gray65", "gray25")
     GRAY_BUTTON_TEXT = "white"
     GRAY_BUTTON_HOVER = ("gray60", "gray30")

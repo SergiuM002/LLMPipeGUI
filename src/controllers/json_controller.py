@@ -5,9 +5,10 @@ from config.environment import SESSIONS_PATH
 
 
 def save_session_info(hostname: str, username: str, session_info: dict):
+    """Create or update one session record in the user's sessions file."""
     SAVE_PATH = SESSIONS_PATH / hostname / username / "sessions.json"
     
-    # Only keep relevant keys
+    # Persist only relevant fields
     wanted_info = ["name", "sequence_count", "sequence_progress", "progress", "finished"]
     clean_info = {k: v for k, v in session_info.items() if k in wanted_info} 
     
@@ -15,6 +16,7 @@ def save_session_info(hostname: str, username: str, session_info: dict):
         with open(SAVE_PATH, "r") as f:
             saved_sessions = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
+        # Treat missing or invalid session storage as an empty list.
         saved_sessions = []
         
     replaced = False
@@ -34,8 +36,10 @@ def save_session_info(hostname: str, username: str, session_info: dict):
 
 
 def save_sessions_info(hostname: str, username: str, sessions_info: list):
+    """Replace the user's stored session records with the supplied records."""
     SAVE_PATH = SESSIONS_PATH / hostname / username / "sessions.json"
     SAVE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    # Exclude unwanted fields before writing session data to disk
     wanted_info = {"name", "sequence_count", "sequence_progress", "progress", "finished"}
     clean_sessions = [
         {key: value for key, value in session_info.items() if key in wanted_info}
@@ -46,12 +50,14 @@ def save_sessions_info(hostname: str, username: str, sessions_info: list):
         json.dump(clean_sessions, f, indent=4)
         
 def load_sessions_info(hostname: str, username: str):
+    """Load a user's sessions and annotate each record with its server and user."""
     SAVE_PATH = SESSIONS_PATH / hostname / username / "sessions.json"
     
     try:
         with open(SAVE_PATH, "r") as f:
             saved_sessions = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
+        # Initialize absent or invalid session storage as an empty JSON array
         Path(SAVE_PATH).parent.mkdir(parents=True, exist_ok=True)
         with open(SAVE_PATH, "w") as f:
             json.dump([], f)
@@ -65,6 +71,7 @@ def load_sessions_info(hostname: str, username: str):
 
 
 def load_all_sessions_info():
+    """Load session records for every server and user under the sessions path."""
     sessions_info = []
 
     if not SESSIONS_PATH.is_dir():
@@ -90,6 +97,7 @@ def load_all_sessions_info():
     return sessions_info
 
 def delete_session(hostname: str, username: str, session_name: str):
+    """Remove a named session from the user's stored session records."""
     SAVE_PATH = SESSIONS_PATH / hostname / username / "sessions.json"
     
     if not Path(SAVE_PATH).exists():

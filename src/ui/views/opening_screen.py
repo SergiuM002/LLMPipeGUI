@@ -2,13 +2,14 @@ import customtkinter as ctk
 from config.styles import Theme
 
 class OpeningScreen(ctk.CTkFrame):
+    """Opening screen controlled by its controller."""
     def __init__(self, controller, master, **kwargs):   
         super().__init__(master, fg_color="transparent", **kwargs)
         
         sessions_button = ctk.CTkButton(
             self, 
             text="View Sessions",
-            command=controller.show_projects_screen,
+            command=controller.show_sessions_screen,
             height=60,
             font=("Roboto", 22),
             text_color=Theme.GREEN_BUTTON_TEXT,
@@ -21,7 +22,7 @@ class OpeningScreen(ctk.CTkFrame):
         new_session_button = ctk.CTkButton(
             self, 
             text="New Session",
-            command=controller.show_new_project_screen,
+            command=controller.show_new_session_screen,
             fg_color=Theme.GRAY_BUTTON,
             text_color=Theme.GRAY_BUTTON_TEXT,
             hover_color=Theme.GRAY_BUTTON_HOVER,

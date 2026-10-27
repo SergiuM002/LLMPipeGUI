@@ -2,6 +2,7 @@ from CTkMessagebox import CTkMessagebox
 from config.styles import Theme
 
 class ErrorPopup(CTkMessagebox):
+    """Standardized error popup."""
     def __init__(self, master, scaling, message):        
         super().__init__(
             master=master, 

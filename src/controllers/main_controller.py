@@ -9,7 +9,6 @@ from controllers.views.opening_screen_controller import OpeningScreenController
 from controllers.views.view_sessions_controller import ViewSessionsController 
 from controllers.ssh_controller import SSHController
 import controllers.json_controller as json_controller
-from config.fonts import Fonts
 from ui.error_popup import ErrorPopup
 from collections import defaultdict
 from pathlib import Path
@@ -17,9 +16,11 @@ import re
 import shlex
 
 class MainController:
+    """Coordinates the application's main window, views, and session state."""
+    
     def __init__(self):
         self.root = ctk.CTk()
-        self.root.withdraw()
+        self.root.withdraw() # Hide window so the user does not see everything loading
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.root.title("LLMPipeGUI")
         self.root.resizable(False, False)
@@ -38,8 +39,7 @@ class MainController:
         self.logged_in = False
         self.server = ""
         self.user = ""
-        self.height_quo = self.current_monitor.height/1200
-        self.fonts = Fonts(self.height_quo)
+        self.height_quo = self.current_monitor.height/1200 # Used to track the size of the monitor
 
         self.original_window_height = 545
         self.original_window_width = 545
@@ -54,13 +54,13 @@ class MainController:
         self.views = {}
         
         self.session_ctrls = []
-        self.sessions = []
+        self.session_views = []
         
         self.all_sessions_info = json_controller.load_all_sessions_info()
         self.all_sessions_info.sort(
             key=lambda info: (
-                info["user"] != self.user,
-                info["user"],
+                info["user"] != self.user or info["server"] != self.server,
+                f"{info["user"]}@{info["server"]}",
                 self._natural_sort_key(info["name"]),
             )
         )
@@ -83,12 +83,13 @@ class MainController:
         
         self.show_opening_screen()
         self.root.update_idletasks()
-        self.root.deiconify()
+        self.root.deiconify() # Show the window after everything has finished loading
         self.root.update()
         
         self.root.mainloop()
         
     def get_current_monitor(self):
+        """Gets the current active monitor. (for multi-monitor setups)"""
         self.root.update_idletasks()
         parts = self.root.wm_geometry().split("+")
         win_x, win_y = int(parts[1]), int(parts[2])
@@ -102,12 +103,13 @@ class MainController:
         return None
     
     def apply_window_size(self):
+        """Applies the window size based on the height_quo."""
         self.root.geometry(f"{round(self.current_window_width*self.height_quo)}x{round(self.current_window_height*self.height_quo)}")
         ctk.set_widget_scaling(self.height_quo)
         self.root.update()   
         
-    # Resize window based on monitor resolution
     def resize_window(self, window, current_monitor):
+        """Periodically checks if the active monitor has changed and resizes if it has."""
         last_monitor = current_monitor
         
         new_monitor = self.get_current_monitor()
@@ -119,110 +121,12 @@ class MainController:
             self.height_quo = current_monitor.height / 1200
             
             self.apply_window_size()
-            self.fonts.resize_text(self.height_quo)
         
-        self.root.after(100, self.resize_window, window, current_monitor)
-
-    def resize_widgets(self, parent, size_quo):
-        for child in parent.winfo_children():
-            self.resize_dimensions(child, size_quo)    
-            self.resize_gaps(child, size_quo)
-                
-            if child.winfo_children():
-                self.resize_widgets(child, size_quo)
-
-    def resize_text(self, parent, size_quo):
-        for child in parent.winfo_children():
-            try:
-                if "font" in child.keys():
-                
-                    raw_font = child.cget("font")
-                    
-                    if raw_font:
-                        font_obj = tkfont.Font(font=raw_font)
-                        
-                        font_name = font_obj.actual("family")
-                        current_size = font_obj.actual("size")  
-                        
-                        child.configure(font=(font_name, round(current_size*size_quo)))
-            except:
-                pass
-                
-            if child.winfo_children():
-                self.resize_text(child, size_quo)
-                
-    def resize_dimensions(self, widget, size_quo):
-        try:
-            if "height" in widget.keys():
-                if not hasattr(widget, "original_height"):
-                    height = widget.cget("height")
-                    
-                    if height is not None:
-                        widget.original_height = round(float(height))
-                    else:
-                        widget.original_height = widget.winfo_height()
-                
-                new_height = round(widget.original_height * size_quo)
-                if new_height > 1:
-                    widget.configure(height=new_height)
-        except:
-            pass
-    
-        try:
-            if "width" in widget.keys():
-                if not hasattr(widget, "original_width"):
-                    width = widget.cget("width")
-                    
-                    if width is not None:
-                        widget.original_width = round(float(width))
-                    else:
-                        widget.original_width = widget.winfo_width()
-        
-                new_width = round(widget.original_width * size_quo)
-                if new_width > 1:
-                    widget.configure(width=new_width)
-        except Exception as e:
-            print(e)  
-            
-    def resize_gaps(self, widget, size_quo):
-        try:
-            if not hasattr(widget, "original_pack_info"):
-                info = widget.pack_info()
-                
-                widget.original_pack_info = {
-                    "side": info.get("side", ctk.TOP), 
-                    "anchor": info.get("anchor", ctk.CENTER),
-                    "fill": info.get("fill", ""),
-                    "padx": info.get("padx", 0),
-                    "pady": info.get("pady", 0) 
-                }
-            
-            if hasattr(widget.original_pack_info["padx"], "__iter__"):
-                padx = widget.original_pack_info["padx"]
-                padx = tuple([size_quo*x for x in padx])
-            else:
-                padx = widget.original_pack_info["padx"]  * size_quo
-            if hasattr(widget.original_pack_info["pady"], "__iter__"):
-                pady = widget.original_pack_info["pady"]
-                pady = tuple([size_quo*x for x in pady])
-            else:
-                pady = widget.original_pack_info["pady"] * size_quo  
-            
-            widget.pack(
-                side=widget.original_pack_info["side"], 
-                anchor=widget.original_pack_info["anchor"], 
-                fill=widget.original_pack_info["fill"], 
-                padx=padx, 
-                pady=pady
-            )
-        except:
-            pass 
-        
-        if widget.winfo_children():
-                self.resize_text(widget, size_quo)
+        self.root.after(100, self.resize_window, window, current_monitor)                
           
-    # Forces each widget to repaint itself (solves visual bugs)
-    def force_coordinate_update(self, widget):
+    @staticmethod
+    def force_coordinate_update(widget):
+        """Forces each widget to repaint itself. (solves visual bugs)"""
         for child in widget.winfo_children():
             if hasattr(child, "_draw"):
                 child._draw()
@@ -230,45 +134,43 @@ class MainController:
             child.update() 
             
             if child.winfo_children():
-                self.force_coordinate_update(child)   
-             
-    # Scroll logic
-    def window_scroll(self, event, frame, dist):
-        current_pos = frame._parent_canvas.yview()[0]
-        step = 0.02
-        
-        if dist > 0:
-            new_pos = current_pos + step
-        else:
-            new_pos = current_pos - step
-        
-        frame._parent_canvas.yview_moveto(max(new_pos, 0))
-        return "break"
+                MainController.force_coordinate_update(child)   
 
     def show_opening_screen(self):
+        """Brings the opening screen to the top."""
         self.opening_screen_view.tkraise()
 
-    def show_projects_screen(self):           
+    def show_sessions_screen(self):          
+        """Brings the sessions view screen to the top."""
         self.view_sessions_view.tkraise()     
             
-    def show_new_project_screen(self): 
+    def show_new_session_screen(self): 
+        """Brings the new session screen to the top."""
         self.create_session_view.tkraise()
         
     def add_session_ctrl(self, new_ctrl):
+        """Adds a session tab controller to the corresponding list."""
         if new_ctrl not in self.session_ctrls:
             self.session_ctrls.append(new_ctrl)
             
     def remove_session_ctrl(self, ctrl):
+        """Removes a session tab controller from the corresponding list."""
         self.session_ctrls.remove(ctrl)
         
-    def add_session(self, new_session):
-        if new_session not in self.sessions:
-            self.sessions.append(new_session)
+    def add_session(self, new_session_view):
+        """Removes a session tab view to the corresponding list."""
+        if new_session_view not in self.session_views:
+            self.session_views.append(new_session_view)
         
-    def remove_session(self, session):
-        self.sessions.remove(session)
+    def remove_session(self, session_view):
+        """Removes a session tab view from the corresponding list."""
+        self.session_views.remove(session_view)
         
     def add_session_info(self, session_info):
+        """
+        Adds a session info dict to the corresponding lists if a dict with 
+        the same name, user and server is not already present.
+        """
         existing_keys_all = {
             (s["name"], s["user"], s["server"]) for s in self.all_sessions_info
         }
@@ -290,10 +192,17 @@ class MainController:
         self.sort_sessions_info()
             
     def sort_sessions_info(self):
+        """
+        Sorts the sessions_info by these parameters in this order:
+        1. Whether the user and server attributes match the ones that were 
+        used for the login
+        2. The sting 'username@hostname'
+        3. The name of the session (see _natural_sort_key for the details)
+        """
         self.all_sessions_info.sort(
             key=lambda info: (
-                info["user"] != self.user,
-                info["user"],
+                info["user"] != self.user or info["server"] != self.server,
+                f"{info["user"]}@{info["server"]}",
                 self._natural_sort_key(info["name"]),
             )
         )
@@ -303,12 +212,27 @@ class MainController:
 
     @staticmethod
     def _natural_sort_key(value):
+        """
+        Returns tuple of (type, value) pairs produced by splitting the string
+        into numeric and non-numeric segments. Each numeric segment is
+        converted to an integer and paired with a leading 1, while each
+        non-numeric segment is kept as a casefolded string and paired with a
+        leading 0. This lets Python sort strings in a natural way where
+        digits are ordered numerically and text is ordered alphabetically.
+        
+        For example, 'session2' will be sorted lower than 'session10' and
+        'session' lower than 'session1'.
+        """
         return tuple(
             (1, int(part)) if part.isdigit() else (0, part.casefold())
             for part in re.split(r"(\d+)", value)
         )
             
     def remove_session_info(self, session_name):
+        """
+        Removes a set of session_infos specified by the name from the 
+        synced and all lists.
+        """
         self.synced_sessions_info = [
             session_info
             for session_info in self.synced_sessions_info
@@ -321,9 +245,18 @@ class MainController:
         ]
             
     def update_sessions_on_login(self):
+        """
+        Checks the logs on the server and updates the session's progress
+        accordingly.
+        """
+        
+        '''
+        Check if any saved sessions belong to the username and hostname the
+        user used to log in
+        '''
         current_sessions = [
             (session, controller)
-            for session, controller in zip(self.sessions, self.session_ctrls)
+            for session, controller in zip(self.session_views, self.session_ctrls)
             if controller.server == self.server and controller.user == self.user
         ]
         if not current_sessions:
@@ -333,6 +266,7 @@ class MainController:
             shlex.quote(controller.session_name)
             for _, controller in current_sessions
         )
+        # Get the names of all the sessions that have running logs present
         command = (
             f"for session_name in {session_names}; do "
             'if [ -f "$HOME/LLMPipe/$session_name.log" ]; then '
@@ -349,6 +283,7 @@ class MainController:
         for session, controller in current_sessions:
             session.on_login_config()
 
+            # Catch the logs of the running sessions
             if controller.session_name in running_session_names:
                 _, stdout, _ = self.ssh_controller.ssh_client.exec_command(
                     f"tail -f ~/LLMPipe/{shlex.quote(controller.session_name)}.log"
@@ -356,6 +291,7 @@ class MainController:
                 controller.resume_progress_updates(
                     session, stdout, controller.sequence_progress
                 )
+            # Set the progress to 100% if no logs were present
             else:
                 controller.progress = 1
                 controller.sequence_progress = controller.sequence_count
@@ -363,6 +299,7 @@ class MainController:
                 session.update_finished_progress()
                     
     def save_sessions(self):
+        """Save current progress info to json file."""
         if not self.server or not self.user:
             return
 
@@ -386,6 +323,7 @@ class MainController:
         )
        
     def sync_sessions(self):
+        """Syncs local sessions info with actual state on the server."""
         tmux_sessions = self.ssh_controller.get_tmux_sessions()
         new_synced_sessions_info = (
             self._get_finished_sessions(tmux_sessions)
@@ -397,7 +335,8 @@ class MainController:
         
         self.sort_sessions_info()
         
-        for view, controller in list(zip(self.sessions, self.session_ctrls)):
+        # Remove sessions that are not present on the server
+        for view, controller in list(zip(self.session_views, self.session_ctrls)):
             if (
                 controller.session_name not in [info["name"] for info in self.synced_sessions_info]
                 and controller.server == self.server
@@ -408,6 +347,7 @@ class MainController:
                 self.remove_session_ctrl(controller)
         
     def _get_finished_sessions(self, tmux_sessions):
+        """Get all finsished sessions info that are saved on the server."""
         # Get finished sessions paths
         paths = self.ssh_controller.get_finished_remote_paths()  
         running_sessions = set(tmux_sessions)
@@ -446,6 +386,7 @@ class MainController:
         return session_dicts
     
     def _get_remote_sessions(self, tmux_sessions):
+        """Get all the sessions currently running on the server."""
         # Get running sessions info
         raw_output = self.ssh_controller.get_running_remote_sessions_info(tmux_sessions)
         session_dicts = []
@@ -479,6 +420,7 @@ class MainController:
         return session_dicts
                     
     def on_closing(self):
+        """Cleanup for when the program closes."""
         self.save_sessions()
         self.ssh_controller.close_clients()
         self.root.destroy()

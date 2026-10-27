@@ -4,6 +4,7 @@ import os
 import controllers.json_controller as json_controller
 
 class SessionTabController:
+    """Coordinates a session tab."""
     def __init__(
         self, main_ctrl,         
         session_name, 
@@ -33,6 +34,7 @@ class SessionTabController:
         self.stop_event = None
         
     def set_session_state(self, view):
+        """Sets the initial progress state."""
         if self.model_selection != None and self.align != None:
             # When starting a fresh session
             self.progress = 0
@@ -49,7 +51,7 @@ class SessionTabController:
                 view.show_session_state_in_progress(self.sequence_progress, self.sequence_count, self.progress)
                 
     def start_session(self, view):
-        
+        """Starts a new session on the server."""
         _, err, error_code = self.main_ctrl.ssh_controller.execute_command(f"touch ~/LLMPipe/{self.session_name}.log")
   
         if error_code != 0:
@@ -57,6 +59,7 @@ class SessionTabController:
             view.show_popup_error(err)
             return
         
+        # Build the remote command from the session's selected model and options
         command = (
             "cd ~/LLMPipe && "
             "source ../miniconda3/etc/profile.d/conda.sh && "
@@ -110,11 +113,13 @@ class SessionTabController:
             view.show_popup_error(err)
             return
                 
+        # Follow the log so progress can be parsed as the remote process runs
         _, stdout, _ = self.main_ctrl.ssh_controller.ssh_client.exec_command(f"tail -f ~/LLMPipe/{self.session_name}.log")   
         
         self.start_progress_updates(view, stdout)
         
     def start_progress_updates(self, view, stdout):
+        """Starts listening for progress updates."""
         self.sequence_progress = 1
         self.stop_event = threading.Event()
         self.stop_event.clear()
@@ -122,83 +127,90 @@ class SessionTabController:
         self.worker_thread.start()
         
     def resume_progress_updates(self, view, stdout, sequence_progress):
+        """Resumes listening for progress updates."""
         self.sequence_progress = sequence_progress
         self.stop_event = threading.Event()
         self.stop_event.clear()
         self.worker_thread = threading.Thread(target=self.update_progress, args=(view, stdout, self.sequence_progress, False))
         self.worker_thread.start()
         
-    # Update the progress of the LLM
     def update_progress(self, view, stdout, sequence_progress, bar_packed=False):
-        buffer = ""
-        
-        while not self.stop_event.is_set():
-            self.stop_event.wait(timeout=0.5)
-            if stdout.channel.recv_ready():
-                chunk = stdout.channel.recv(1048576).decode('utf-8', errors='ignore')
-                buffer += chunk
-                
-                if '\n' in buffer and self.sequence_count > sequence_progress and re.search(r"Processing windows: \d+it ", buffer):
-                    sequence_progress += 1
-                    self.sequence_progress = sequence_progress
-
-                if '\r' in buffer and view.progress_text.get() != "transfering files...":
-                    updates = buffer.split('\r')
-                    current_status = updates[-1].strip()
+        """Updates progress bar and text."""
+        try:
+            buffer = ""
+            
+            while not self.stop_event.is_set():
+                self.stop_event.wait(timeout=0.5)
+                if stdout.channel.recv_ready():
+                    chunk = stdout.channel.recv(1048576).decode('utf-8', errors='ignore')
+                    buffer += chunk
                     
-                    if match_processing := re.search(r"Processing windows:\s*(\d+)%", current_status):
-                        if bar_packed == False:
-                            bar_packed = True
-                            self.main_ctrl.root.after(0, view.call_live_progress_update, view.pack_progress_bar)
-                            self.main_ctrl.root.after(0, view.call_live_progress_update, view.pack_time_remaining_label)
+                    # The tool emits a line per sequence and uses carriage returns for live status
+                    if '\n' in buffer and self.sequence_count > sequence_progress and re.search(r"Processing windows: \d+it ", buffer):
+                        sequence_progress += 1
+                        self.sequence_progress = sequence_progress
+
+                    if '\r' in buffer and view.progress_text.get() != "transfering files...":
+                        updates = buffer.split('\r')
+                        current_status = updates[-1].strip()
                         
-                        percentage = int(match_processing.group(1))
-                        if match_eta := re.search(r"<((\d+:)*\d+),", current_status):
-                            eta = match_eta.group(1)      
+                        # Update widgets on the main thread
+                        if match_processing := re.search(r"Processing windows:\s*(\d+)%", current_status):
+                            if bar_packed == False:
+                                bar_packed = True
+                                self.main_ctrl.root.after(0, view.call_live_progress_update, view.pack_progress_bar)
+                                self.main_ctrl.root.after(0, view.call_live_progress_update, view.pack_time_remaining_label)
+                            
+                            percentage = int(match_processing.group(1))
+                            if match_eta := re.search(r"<((\d+:)*\d+),", current_status):
+                                eta = match_eta.group(1)      
+                                self.main_ctrl.root.after(
+                                    0, 
+                                    view.call_live_progress_update, 
+                                    view.update_eta, 
+                                    str(eta)
+                                )     
+                            
+                            self.progress = int(percentage)/100
                             self.main_ctrl.root.after(
                                 0, 
                                 view.call_live_progress_update, 
-                                view.update_eta, 
-                                str(eta)
-                            )     
+                                view.update_percentage_progress, 
+                                self.sequence_progress, 
+                                self.sequence_count, 
+                                percentage, self.progress
+                            )
+                        else:
+                            bar_packed = False
+                            self.progress = 1
+                            self.main_ctrl.root.after(
+                                0, 
+                                view.call_live_progress_update, 
+                                view.update_processing_progress, 
+                                self.sequence_progress, 
+                                self.sequence_count
+                            )
                         
-                        self.progress = int(percentage)/100
-                        self.main_ctrl.root.after(
-                            0, 
-                            view.call_live_progress_update, 
-                            view.update_percentage_progress, 
-                            self.sequence_progress, 
-                            self.sequence_count, 
-                            percentage, self.progress
-                        )
-                    else:
-                        bar_packed = False
-                        self.progress = 1
-                        self.main_ctrl.root.after(
-                            0, 
-                            view.call_live_progress_update, 
-                            view.update_processing_progress, 
-                            self.sequence_progress, 
-                            self.sequence_count
-                        )
-                    
-                    buffer = updates[-1]
-        
-            if "Script finished." in buffer:
-                self.finished = True
-                self.stop_event.set()
-                self.main_ctrl.root.after(
-                    0, 
-                    view.call_live_progress_update, 
-                    view.update_finished_progress
-                )
-                stdout.channel.close()
-
+                        buffer = updates[-1]
+            
+                if "Script finished." in buffer:
+                    self.finished = True
+                    self.stop_event.set()
+                    self.main_ctrl.root.after(
+                        0, 
+                        view.call_live_progress_update, 
+                        view.update_finished_progress
+                    )
+                    stdout.channel.close()
+        except AttributeError:
+            pass
                 
     def get_files(self, view, output_path):
+        """Gets the files of this session."""
         ssh_controller = self.main_ctrl.ssh_controller
         local_path = f"{output_path}/{self.session_name}_results/"
 
+        # Avoid replacing a previous download unless the user explicitly confirms
         if os.path.exists(local_path):
             msg = f"The target folder already exists:\n{local_path}\nContinue and overwrite its contents?"
             if view.get_confirmation(msg) != "Yes":
@@ -219,6 +231,7 @@ class SessionTabController:
             return
         
     def confirm_delete(self, view):
+        """Asks the user for confirmation for a delete."""
         finished = False
         
         if self.progress == 1 and self.sequence_count == self.sequence_progress:
@@ -232,6 +245,7 @@ class SessionTabController:
             
             
     def delete_session(self, view, finished):
+        """Deletes the session and the associated files on the server."""
         if finished:
             self.main_ctrl.ssh_controller.execute_command(f"rm -r ~/LLMPipe/results/{self.session_name}")  
         else:
@@ -269,9 +283,11 @@ class SessionTabController:
         view.delete_self()
         
     def logged_in_to_server_with_user(self, server, user):
+        """Checks if the user is logged in with the user and server associated with this session."""
         return server == self.main_ctrl.server and user == self.main_ctrl.user
         
     def cleanup(self, view):
+        """Removes the session from the list and clears references."""
         self.main_ctrl.remove_session_ctrl(self)
         self.main_ctrl.remove_session(view)
         self.main_ctrl.remove_session_info(self.session_name)

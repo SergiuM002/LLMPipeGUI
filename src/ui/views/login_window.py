@@ -3,7 +3,10 @@ from ui.error_popup import ErrorPopup
 from config.styles import Theme
 
 class LoginWindow(ctk.CTkToplevel):
+    """Login form controlled by the login controller."""
+
     def __init__(self, controller, master, *args, **kwargs):
+        """Initialize the dialog, create its input fields, and bind actions."""
         super().__init__(*args, **kwargs)
         
         self.controller = controller
@@ -12,6 +15,7 @@ class LoginWindow(ctk.CTkToplevel):
         self.attributes("-topmost", True)
         self.title("Login")
         
+        # Scale the dialog dimensions using the main window's UI scale.
         login_win_width = round(300 * controller.main_ctrl.height_quo)
         login_win_height = round(350 * controller.main_ctrl.height_quo)
         
@@ -20,6 +24,7 @@ class LoginWindow(ctk.CTkToplevel):
         win_width = controller.main_ctrl.root.winfo_width()
         win_height = controller.main_ctrl.root.winfo_height()
         
+        # Center the dialog over the main application window.
         login_win_x = win_x + round(win_width/2) - round(login_win_width/2)
         login_win_y = win_y + round(win_height/2) - round(login_win_height/2)
         
@@ -27,6 +32,7 @@ class LoginWindow(ctk.CTkToplevel):
         self.resizable(False, False)
         
         
+        # Keep the form usable on screens where its contents exceed the window.
         self.login_scrollframe = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self.login_scrollframe.pack(fill="both", expand=True)
         
@@ -68,25 +74,30 @@ class LoginWindow(ctk.CTkToplevel):
         self.protocol("WM_DELETE_WINDOW", lambda: self.delete_self())
         
     def fill_saved_info(self, login_info):
+        """Fill the server and username fields with saved login information."""
         self.server_entry.insert(0, login_info["server"])
         self.username_entry.insert(0, login_info["username"])
         self.controller.main_ctrl.root.after(100, self.password_entry.focus_force)
         
     def enable_confirm_button(self):
+        """Enable the login button after a login attempt has completed."""
         self.confirm_button.configure(state="normal")
         self.confirm_button.update()
         
     def disable_confirm_button(self):
+        """Disable the login button while a login attempt is in progress."""
         self.confirm_button.configure(state="disabled")
         self.confirm_button.update()
         
     def confirm_button_clicked(self):
+        """Submit the form once and delegate login processing to the controller."""
         self.unbind_all("<Return>")
         self.disable_confirm_button()
         
         self.controller.confirm_login(self)    
         
     def show_fields_error_message_box(self):
+        """Display an error popup when required fields are missing."""
         scaling = self.controller.main_ctrl.height_quo
         self.msg_box = ErrorPopup(self.controller.main_ctrl.root, scaling, "Please fill out all the fields.")
 
@@ -95,25 +106,14 @@ class LoginWindow(ctk.CTkToplevel):
         self.confirm_button.configure(state="normal") 
         
     def show_input_error_message_box(self, message):
+        """Display an error popup containing the supplied message."""
         scaling = self.controller.main_ctrl.height_quo
         self.msg_box = ErrorPopup(self.controller.main_ctrl.root, scaling, message)
         self.msg_box.bind("<Destroy>", lambda e: self.controller.clean_msg_box_bindings(e, self))   
         
         self.confirm_button.configure(state="normal") 
-    
-    # Scroll logic
-    def login_scroll(self, event, dist):            
-        current_pos = self.login_scrollframe._parent_canvas.yview()[0]
-        
-        step = 0.02
-        
-        if dist > 0:
-            new_pos = current_pos + step
-        else:
-            new_pos = current_pos - step
-        
-        self.login_scrollframe._parent_canvas.yview_moveto(max(new_pos, 0))
         
     def delete_self(self):
+        """Remove the Return-key binding and close this dialog."""
         self.unbind_all("<Return>")
         self.destroy()

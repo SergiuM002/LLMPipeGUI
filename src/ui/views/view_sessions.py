@@ -2,12 +2,16 @@ import customtkinter as ctk
 from config.styles import Theme
 
 class ViewSessions(ctk.CTkFrame):
+    """Display sessions and provide navigation, login, and sync controls."""
+
     def __init__(self, controller, master, **kwargs):   
+        """Create the sessions view and initialize its controls."""
         super().__init__(master, fg_color="transparent", **kwargs)
         
         self.master = master
         self.controller = controller
         
+        # Keep navigation and login status together in the top row
         self.button_frame1 = ctk.CTkFrame(self, fg_color="transparent")
         self.button_frame1.pack(fill="x", padx=20, pady=(20, 0))
         
@@ -45,6 +49,7 @@ class ViewSessions(ctk.CTkFrame):
         )
         self.login_button.pack(side=ctk.RIGHT, padx=(0, 15))
         
+        # Session actions are enabled after the user logs in
         self.button_frame2 = ctk.CTkFrame(self, fg_color="transparent")
         self.button_frame2.pack(fill="x", padx=20, pady=(20, 5))
         
@@ -76,6 +81,7 @@ class ViewSessions(ctk.CTkFrame):
         )
         self.only_synced_checkbox.pack(side=ctk.LEFT, padx=10)
         
+        # Session widgets are displayed in this scrollable area
         self.scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self.scroll_frame.pack(fill="both", expand=True)
                 
@@ -83,10 +89,11 @@ class ViewSessions(ctk.CTkFrame):
         self.controller.load_sessions()
         
     def show_session(self, session):
+        """Pack a session widget into the scrollable session list."""
         session.pack(fill="x", padx=20, pady=10)
         
-    # Update widgets and progress after log in
     def update_login(self):
+        """Reflect successful login and refresh the available sessions."""
         self.login_text.set("logged in ✓")
             
         self.login_label.update()
