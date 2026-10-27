@@ -1,15 +1,15 @@
 import customtkinter as ctk
 from tkinter import font as tkfont
 from screeninfo import get_monitors
-from ui.views.session_creation import CreateSession 
-from ui.views.opening_screen import OpeningScreen
-from ui.views.view_sessions import ViewSessions
-from controllers.views.session_creation_controller import CreateSessionController 
-from controllers.views.opening_screen_controller import OpeningScreenController 
-from controllers.views.view_sessions_controller import ViewSessionsController 
-from controllers.ssh_controller import SSHController
-import controllers.json_controller as json_controller
-from ui.error_popup import ErrorPopup
+from llmpipegui.ui.views.session_creation import CreateSession 
+from llmpipegui.ui.views.opening_screen import OpeningScreen
+from llmpipegui.ui.views.view_sessions import ViewSessions
+from llmpipegui.controllers.views.session_creation_controller import CreateSessionController 
+from llmpipegui.controllers.views.opening_screen_controller import OpeningScreenController 
+from llmpipegui.controllers.views.view_sessions_controller import ViewSessionsController 
+from llmpipegui.controllers.ssh_controller import SSHController
+import llmpipegui.controllers.json_controller as json_controller
+from llmpipegui.ui.error_popup import ErrorPopup
 from collections import defaultdict
 from pathlib import Path
 import re

@@ -2,7 +2,7 @@ import paramiko
 import socket
 import json
 import traceback
-import config.environment as env
+import llmpipegui.config.environment as env
 import threading
 
 class LoginWindowController:

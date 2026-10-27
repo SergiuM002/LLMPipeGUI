@@ -4,4 +4,13 @@
 data/
 dist/
 build/
+.briefcase/
+logs/
+*.egg-info/
+*.dist-info/
+.eggs/
+.DS_Store
+Thumbs.db
+*.py[cod]
 install script/remote script/README.md
+

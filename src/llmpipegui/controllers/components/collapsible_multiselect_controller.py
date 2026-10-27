@@ -1,4 +1,4 @@
-import config.environment as env
+import llmpipegui.config.environment as env
 
 class CollapsibleMultiselectController:
     def __init__(self, main_ctrl, options, options_info=None):

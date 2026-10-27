@@ -5,7 +5,7 @@ project_root = os.path.abspath(os.path.join(SPECPATH, '..'))
 src_dir = os.path.abspath(os.path.join(SPECPATH, '../src'))
 
 a = Analysis(
-    ['../src/main.py'],
+    ['../src/llmpipegui/__main__.py'],
     pathex=[project_root, src_dir],
     binaries=[],
     datas=[],
@@ -29,12 +29,13 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='../icons/llmpipegui.ico'
 )
 coll = COLLECT(
     exe,
@@ -44,4 +45,10 @@ coll = COLLECT(
     upx=True,
     upx_exclude=[],
     name='LLMPipeGUI',
+)
+app = BUNDLE(
+    exe,
+    name='LLMPipeGUI.app',
+    icon='../icons/llmpipegui.icns',
+    bundle_identifier='com.sergiu.llmpipegui',
 )

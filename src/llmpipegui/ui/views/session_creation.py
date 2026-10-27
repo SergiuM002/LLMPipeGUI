@@ -1,14 +1,14 @@
 import subprocess
 import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
-from ui.error_popup import ErrorPopup
+from llmpipegui.ui.error_popup import ErrorPopup
 from customtkinter import filedialog
-from ui.components.collapsible_multiselect import CollapsibleMultiSelect
-from controllers.components.collapsible_multiselect_controller import CollapsibleMultiselectController
-from ui.views.login_window import LoginWindow
-from controllers.views.login_window_controller import LoginWindowController
-from config.styles import Theme
-import config.environment as env
+from llmpipegui.ui.components.collapsible_multiselect import CollapsibleMultiSelect
+from llmpipegui.controllers.components.collapsible_multiselect_controller import CollapsibleMultiselectController
+from llmpipegui.ui.views.login_window import LoginWindow
+from llmpipegui.controllers.views.login_window_controller import LoginWindowController
+from llmpipegui.config.styles import Theme
+import llmpipegui.config.environment as env
 
 class CreateSession(ctk.CTkFrame):
     """View for importing a FASTA file and configuring a new session."""

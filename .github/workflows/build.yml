@@ -1,0 +1,222 @@
+name: Build Cross-Platform Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
+
+jobs:
+  build:
+    name: Build on ${{ matrix.ubuntu_ver && format('{0}-{1}', matrix.platform, matrix.ubuntu_ver) || matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false # Keeps building other OS targets even if one fails
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-rpm
+            distro: fedora
+            output_extension: "rpm"
+
+          - os: ubuntu-latest
+            platform: linux-arch
+            distro: archlinux
+            output_extension: "pkg.tar.zst"
+
+          - os: ubuntu-26.04
+            platform: linux
+            ubuntu_ver: "ubuntu-26.04"
+            mint_ver: "mint-23"
+            output_extension: "deb"
+
+          - os: ubuntu-24.04
+            platform: linux
+            ubuntu_ver: "ubuntu-24.04"
+            mint_ver: "mint-22"
+            output_extension: "deb"
+
+          - os: ubuntu-22.04
+            platform: linux
+            ubuntu_ver: "ubuntu-22.04"
+            mint_ver: "mint-21"
+            output_extension: "deb"
+
+          - os: windows-latest
+            platform: windows
+            output_extension: "zip"
+
+          - os: macos-14
+            platform: macOS
+            output_extension: "dmg"
+
+    steps:
+      # Checkout repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Install Linux system dependencies (Required for Briefcase GTK/AppImage build)
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git \
+            build-essential \
+            python3-dev \
+            python3-venv \
+            python3-pip \
+            libgirepository1.0-dev \
+            libcairo2-dev \
+            pkg-config \
+            gir1.2-gtk-3.0 \
+            imagemagick
+
+      # Set up Python environment
+      - name: Set up Python (Non-Linux)
+        if: runner.os != 'Linux'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Install BeeWare Briefcase
+      - name: Install Briefcase
+        if: matrix.platform != 'windows'
+        run: |
+          python -m pip install --upgrade pip
+          pip install briefcase
+
+      # -- Briefcase Create and Build --
+
+      # Briefcase Create and build for macOS and Debian
+      - name: Create and build platform project (macOS/Debian)
+        if: matrix.distro != 'fedora' && matrix.distro != 'archlinux' && matrix.platform != 'windows'
+        run: |
+          briefcase create ${{ matrix.platform }} -vv
+          briefcase build ${{ matrix.platform }} -vv
+
+      # Briefcase Create and build for archlinux and fedora
+      - name: Create and build platform project (Arch/Fedora)
+        if: matrix.distro == 'fedora' || matrix.distro == 'archlinux'
+        run: |
+          briefcase create linux system --target ${{ matrix.distro }} -vv
+          briefcase build linux system --target ${{ matrix.distro }} -vv
+
+      # -- Package Installation --
+
+      # Package installer for Linux (uses --no-input to avoid interactive prompt hangs)
+      - name: Package installer (Linux)
+        if: matrix.platform == 'linux' && matrix.distro != 'fedora' && matrix.distro != 'archlinux'
+        run: briefcase package ${{ matrix.platform }} --no-input -vv
+
+      # Package installer for Archlinux
+      - name: Package installer (Archlinux)
+        if: matrix.distro == 'archlinux'
+        run: |
+          if [ -f CHANGELOG.md ]; then
+              cp CHANGELOG.md CHANGELOG
+            else
+              touch CHANGELOG
+            fi
+
+            if [ -f LICENSE.md ]; then
+              cp LICENSE.md LICENSE
+            else
+              touch LICENSE
+            fi
+        
+          briefcase package linux system --target archlinux --no-input
+
+      # Package installer for Fedora
+      - name: Package installer (Fedora)
+        if: matrix.distro == 'fedora'
+        run: briefcase package linux system --target fedora --no-input
+
+      # Package installer for macOS (uses --no-sign)
+      - name: Package installer (macOS)
+        if: matrix.platform == 'macOS'
+        run: briefcase package macOS --no-sign --no-input -vv
+
+      # For Windows: Build using PyInstaller and your custom .spec file
+      - name: Build and Package with PyInstaller (Windows)
+        if: matrix.platform == 'windows'
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+          pyinstaller spec/main.spec
+        shell: pwsh
+          
+      # -- File zipping and renaming --
+
+      # Rename .deb file based on distro version
+      - name: Rename .deb (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          mkdir -p dist
+          mv dist/*.deb dist/LLMPipeGUI-${{ matrix.ubuntu_ver }}-${{ matrix.mint_ver }}.deb
+
+      # Rename .rpm file
+      - name: Rename .rpm
+        if: matrix.distro == 'fedora'
+        run: |
+          mv dist/*.rpm dist/LLMPipeGUI-fedora.rpm
+        shell: bash
+
+      # Rename .pkg.tar.zst file
+      - name: Rename .pkg.tar.zst
+        if: matrix.distro == 'archlinux'
+        run: |
+          mv dist/*.pkg.tar.zst dist/LLMPipeGUI-archlinux.pkg.tar.zst
+        shell: bash
+
+      - name: Rename .dmg (macOS)
+        if: matrix.platform == 'macOS'
+        run: mv dist/*.dmg dist/LLMPipeGUI-macOS.dmg
+
+      - name: Zip windows application
+        if: matrix.platform == 'windows'
+        run: Compress-Archive -Path dist/LLMPipeGUI/* -DestinationPath dist/LLMPipeGUI-windows.zip
+        shell: pwsh
+
+      # Upload generated installers as build artifacts
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: LLMPipeGUI-installer-${{ matrix.platform }}-${{ matrix.distro || matrix.ubuntu_ver || 'standard' }}
+          path: |
+            dist/*.${{ matrix.output_extension }}
+            dist/*.AppImage
+            dist/*.pkg
+            dist/*.zip
+            dist/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*
+          name: "LLMPipeGUI ${{ github.ref_name }}"
+          body_path: release-notes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

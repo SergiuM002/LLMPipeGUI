@@ -1,7 +1,7 @@
 import threading
 import re
 import os
-import controllers.json_controller as json_controller
+import llmpipegui.controllers.json_controller as json_controller
 
 class SessionTabController:
     """Coordinates a session tab."""

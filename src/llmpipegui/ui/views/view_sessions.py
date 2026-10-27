@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from config.styles import Theme
+from llmpipegui.config.styles import Theme
 
 class ViewSessions(ctk.CTkFrame):
     """Display sessions and provide navigation, login, and sync controls."""

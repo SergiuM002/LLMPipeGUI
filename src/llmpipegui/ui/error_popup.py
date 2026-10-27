@@ -1,5 +1,5 @@
 from CTkMessagebox import CTkMessagebox
-from config.styles import Theme
+from llmpipegui.config.styles import Theme
 
 class ErrorPopup(CTkMessagebox):
     """Standardized error popup."""

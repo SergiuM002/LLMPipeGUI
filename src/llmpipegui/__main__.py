@@ -1,4 +1,4 @@
-from controllers.main_controller import MainController
+from llmpipegui.controllers.main_controller import MainController
 
 def main():
     MainController()

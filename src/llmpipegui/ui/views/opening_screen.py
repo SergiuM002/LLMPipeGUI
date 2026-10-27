@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from config.styles import Theme
+from llmpipegui.config.styles import Theme
 
 class OpeningScreen(ctk.CTkFrame):
     """Opening screen controlled by its controller."""

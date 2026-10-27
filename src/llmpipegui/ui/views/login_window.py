@@ -1,6 +1,6 @@
 import customtkinter as ctk
-from ui.error_popup import ErrorPopup
-from config.styles import Theme
+from llmpipegui.ui.error_popup import ErrorPopup
+from llmpipegui.config.styles import Theme
 
 class LoginWindow(ctk.CTkToplevel):
     """Login form controlled by the login controller."""

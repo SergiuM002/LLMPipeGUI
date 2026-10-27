@@ -2,10 +2,10 @@ import subprocess
 import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
 from customtkinter import filedialog
-from config.styles import Theme
-import config.environment as env
+from llmpipegui.config.styles import Theme
+import llmpipegui.config.environment as env
 from tkinter import TclError
-from ui.error_popup import ErrorPopup
+from llmpipegui.ui.error_popup import ErrorPopup
 
 class SessionTab(ctk.CTkFrame):
     """Display session status, progress, and session-related controls."""

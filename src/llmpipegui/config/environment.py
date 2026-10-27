@@ -1,6 +1,11 @@
 import platform
 import sys
+import platformdirs
 from pathlib import Path
+
+app_author = "SergiuM002"
+app_name = "LLMPipeGUI"
+DATA_DIR = Path(platformdirs.user_data_dir(appname=app_name, appauthor=app_author))
 
 # Record the operating system for platform-specific configuration
 OPERATING_SYSTEM = platform.system()
@@ -13,7 +18,6 @@ else:
     BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Define paths for application data and session-related files
-DATA_DIR = BASE_DIR / "src" / "data"
 SESSIONS_PATH = DATA_DIR / "sessions"
 LASTLOGIN_FILE = DATA_DIR / "lastlogin.json"
 

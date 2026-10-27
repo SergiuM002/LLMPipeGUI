@@ -1,7 +1,7 @@
 import customtkinter as ctk
 import platform
-from ui.components.info_icon import InfoIcon
-from config.styles import Theme
+from llmpipegui.ui.components.info_icon import InfoIcon
+from llmpipegui.config.styles import Theme
 
 class CollapsibleMultiSelect(ctk.CTkFrame):
     """Display a collapsible list of checkbox options supplied by a controller."""

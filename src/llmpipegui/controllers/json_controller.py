@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from config.environment import SESSIONS_PATH
+from llmpipegui.config.environment import SESSIONS_PATH
 
 
 def save_session_info(hostname: str, username: str, session_info: dict):

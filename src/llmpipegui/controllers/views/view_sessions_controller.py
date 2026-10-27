@@ -1,8 +1,8 @@
-from ui.components.session_tab import SessionTab
-from ui.views.login_window import LoginWindow
-from controllers.components.session_tab_controller import SessionTabController
-from controllers.views.login_window_controller import LoginWindowController
-import controllers.json_controller as json_controller
+from llmpipegui.ui.components.session_tab import SessionTab
+from llmpipegui.ui.views.login_window import LoginWindow
+from llmpipegui.controllers.components.session_tab_controller import SessionTabController
+from llmpipegui.controllers.views.login_window_controller import LoginWindowController
+import llmpipegui.controllers.json_controller as json_controller
 
 class ViewSessionsController:
     """Coordinates session data and actions for the sessions screen."""
