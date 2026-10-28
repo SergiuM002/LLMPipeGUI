@@ -17,7 +17,8 @@ import shlex
 
 class MainController:
     """Coordinates the application's main window, views, and session state."""
-    
+    ctk.deactivate_automatic_dpi_awareness()
+
     def __init__(self):
         self.root = ctk.CTk()
         self.root.withdraw() # Hide window so the user does not see everything loading
@@ -105,8 +106,7 @@ class MainController:
     def apply_window_size(self):
         """Applies the window size based on the height_quo."""
         self.root.geometry(f"{round(self.current_window_width*self.height_quo)}x{round(self.current_window_height*self.height_quo)}")
-        ctk.set_widget_scaling(self.height_quo)
-        self.root.update()   
+        ctk.set_widget_scaling(self.height_quo) 
         
     def resize_window(self, window, current_monitor):
         """Periodically checks if the active monitor has changed and resizes if it has."""
