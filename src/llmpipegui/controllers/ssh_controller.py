@@ -73,9 +73,9 @@ class SSHController:
             
             return out, err, exit_code
         except socket.timeout as e:
-            return out, f"Connection timeout: {e}", self.EXIT_CODE_TIMEOUT
+            return out, f"Connection timeout: {str(e)}", self.EXIT_CODE_TIMEOUT
         except (paramiko.ssh_exception.SSHException, socket.error) as e:
-            return out, f"SSH connection error: {e}", self.EXIT_CODE_SSH_ERROR
+            return out, f"SSH connection error: {str(e)}", self.EXIT_CODE_SSH_ERROR
         except self.RemoteCommandError as e:
             return out, str(e), exit_code
         
@@ -146,3 +146,15 @@ class SSHController:
         # Return the combined command output, defaulting to an empty string
         batch_cmd = " ; ".join(cmd_parts)
         return self.execute_command(batch_cmd)[0] or ""
+    
+    def remote_dir_exists(self, dir_name: str) -> bool:
+        try:
+            attrs = self.sftp_client.stat(dir_name)
+            
+            if stat.S_ISDIR(attrs.st_mode):
+                return True
+            else: 
+                return False
+        except FileNotFoundError:
+            return False
+            

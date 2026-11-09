@@ -11,3 +11,7 @@ class OpeningScreenController:
         """Brings the session creation screen to the top."""
         self.main_ctrl.show_new_session_screen()
         
+    def show_remote_install_window(self):
+        """Opens the remote install window."""
+        self.main_ctrl.show_remote_install_window()
+        

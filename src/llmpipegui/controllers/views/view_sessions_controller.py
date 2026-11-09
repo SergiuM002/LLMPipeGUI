@@ -110,7 +110,7 @@ class ViewSessionsController:
         self.refresh_sessions()
             
     def show_login_window(self, view):
-        """Open a login window."""
+        """Opens a login window."""
         LoginWindow(LoginWindowController(self.main_ctrl), view)
         
     def toggle_only_synced(self):

@@ -1,0 +1,15 @@
+To use this script, you will need to run the following commands to install the dependencies in your conda environment:
+
+conda install nvidia::cuda-nvcc -y
+
+conda install nvidia::cuda-toolkit -y
+
+conda install mafft
+
+pip3 install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+
+pip3 install mamba-ssm==2.2.2 transformers==4.40.0 git+https://github.com/dridk/PyVCF3.git@master scipy==1.12.0 biopython xgboost==2.0.3 scikit-learn==1.4.0 matplotlib --no-build-isolation
+
+pip install --quiet git+https://github.com/SilvanCodes/gpn.git
+
+

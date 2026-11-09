@@ -13,9 +13,11 @@ OPERATING_SYSTEM = platform.system()
 # Use the bundled application directory when frozen; otherwise use the
 # repository root relative to this file.
 if getattr(sys, 'frozen', False):
-    BASE_DIR = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent.parent.parent))
+    BASE_DIR = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent.parent))
 else:
-    BASE_DIR = Path(__file__).resolve().parent.parent.parent
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    
+REMOTE_SCRIPT_DIR = BASE_DIR / "remote_script" / "llm_pipe.py"
 
 # Define paths for application data and session-related files
 SESSIONS_PATH = DATA_DIR / "sessions"

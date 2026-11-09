@@ -4,9 +4,11 @@ from screeninfo import get_monitors
 from llmpipegui.ui.views.session_creation import CreateSession 
 from llmpipegui.ui.views.opening_screen import OpeningScreen
 from llmpipegui.ui.views.view_sessions import ViewSessions
+from llmpipegui.ui.views.remote_install_window import RemoteInstallWindow
 from llmpipegui.controllers.views.session_creation_controller import CreateSessionController 
 from llmpipegui.controllers.views.opening_screen_controller import OpeningScreenController 
 from llmpipegui.controllers.views.view_sessions_controller import ViewSessionsController 
+from llmpipegui.controllers.views.remote_install_window_controller import RemoteInstallWindowController
 from llmpipegui.controllers.ssh_controller import SSHController
 import llmpipegui.controllers.json_controller as json_controller
 from llmpipegui.ui.error_popup import ErrorPopup
@@ -78,6 +80,8 @@ class MainController:
         self.create_session_ctrl = CreateSessionController(self)
         self.create_session_view = CreateSession(self.create_session_ctrl, self.root)
         
+        self.remote_install_window = None
+        
         self.opening_screen_view.grid(row=0, column=0, sticky=ctk.NSEW)
         self.view_sessions_view.grid(row=0, column=0, sticky=ctk.NSEW)
         self.create_session_view.grid(row=0, column=0, sticky=ctk.NSEW)
@@ -147,6 +151,10 @@ class MainController:
     def show_new_session_screen(self): 
         """Brings the new session screen to the top."""
         self.create_session_view.tkraise()
+        
+    def show_remote_install_window(self):
+        """Spawns the remote install window."""
+        self.remote_install_window = RemoteInstallWindow(RemoteInstallWindowController(self), self.root)
         
     def add_session_ctrl(self, new_ctrl):
         """Adds a session tab controller to the corresponding list."""
@@ -249,6 +257,8 @@ class MainController:
         Checks the logs on the server and updates the session's progress
         accordingly.
         """
+        if self.remote_install_window:
+            self.remote_install_window.update_login()
         
         '''
         Check if any saved sessions belong to the username and hostname the
