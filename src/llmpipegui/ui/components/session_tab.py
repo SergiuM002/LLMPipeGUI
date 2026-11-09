@@ -48,12 +48,14 @@ class SessionTab(ctk.CTkFrame):
         )
         self.progress_frame.pack(side=ctk.LEFT, padx=20, pady=20)
               
-        self.progress_bar = ctk.CTkProgressBar(
-            self.progress_frame,
-            progress_color=Theme.GREEN_BUTTON
+        self.time_remaining = ctk.StringVar(self.progress_frame, "Sequence ETA: --")
+        self.time_remaining_label = ctk.CTkLabel(
+            self.progress_frame, 
+            textvariable=self.time_remaining,
+            font=("Roboto", 13),
+            text_color=("gray20", "white")
         )
-        self.progress_bar.set(0)
-        self.progress_bar.pack(anchor=ctk.W)
+        self.time_remaining_label.pack(side=ctk.BOTTOM ,anchor=ctk.W)
         
         self.progress_text = ctk.StringVar(self.info_frame, "starting model...")
         self.progress_label = ctk.CTkLabel(
@@ -62,16 +64,14 @@ class SessionTab(ctk.CTkFrame):
             font=("Roboto", 13),
             text_color=("gray20", "white")
         )
-        self.progress_label.pack(anchor=ctk.W, padx=(0, 10))
+        self.progress_label.pack(side=ctk.BOTTOM, anchor=ctk.W, padx=(0, 10))
         
-        self.time_remaining = ctk.StringVar(self.progress_frame, "Sequence ETA: --")
-        self.time_remaining_label = ctk.CTkLabel(
-            self.progress_frame, 
-            textvariable=self.time_remaining,
-            font=("Roboto", 13),
-            text_color=("gray20", "white")
+        self.progress_bar = ctk.CTkProgressBar(
+            self.progress_frame,
+            progress_color=Theme.GREEN_BUTTON
         )
-        self.time_remaining_label.pack(anchor=ctk.W)
+        self.progress_bar.set(0)
+        self.progress_bar.pack(side=ctk.BOTTOM, anchor=ctk.W)
         
         # Actions are grouped on the right and enabled only for logged-in users
         self.button_frame = ctk.CTkFrame(
@@ -150,7 +150,7 @@ class SessionTab(ctk.CTkFrame):
         
     def pack_progress_bar(self):
         """Make the progress bar visible again."""
-        self.progress_bar.pack()
+        self.progress_bar.pack(side=ctk.BOTTOM, anchor=ctk.W)
         
     def pack_time_remaining_label(self):
         """Show the sequence ETA label."""
