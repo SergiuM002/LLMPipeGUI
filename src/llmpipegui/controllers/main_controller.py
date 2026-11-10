@@ -63,7 +63,7 @@ class MainController:
         self.all_sessions_info.sort(
             key=lambda info: (
                 info["user"] != self.user or info["server"] != self.server,
-                f"{info["user"]}@{info["server"]}",
+                f"{info['user']}@{info['server']}",
                 self._natural_sort_key(info["name"]),
             )
         )
@@ -210,7 +210,7 @@ class MainController:
         self.all_sessions_info.sort(
             key=lambda info: (
                 info["user"] != self.user or info["server"] != self.server,
-                f"{info["user"]}@{info["server"]}",
+                f"{info['user']}@{info['server']}",
                 self._natural_sort_key(info["name"]),
             )
         )

@@ -13,19 +13,21 @@ jobs:
   build:
     name: Build on ${{ matrix.ubuntu_ver && format('{0}-{1}', matrix.platform, matrix.ubuntu_ver) || matrix.platform }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     strategy:
       fail-fast: false # Keeps building other OS targets even if one fails
       matrix:
         include:
-          - os: ubuntu-latest
-            platform: linux-rpm
-            distro: fedora
-            output_extension: "rpm"
+          #- os: ubuntu-latest
+          #  platform: linux-rpm
+          #  distro: fedora
+          #  output_extension: "rpm"
 
-          - os: ubuntu-latest
-            platform: linux-arch
-            distro: archlinux
-            output_extension: "pkg.tar.zst"
+          #- os: ubuntu-latest
+          #  platform: linux-arch
+          #  distro: archlinux
+          #  output_extension: "pkg.tar.zst"
 
           - os: ubuntu-26.04
             platform: linux
@@ -49,11 +51,18 @@ jobs:
             platform: windows
             output_extension: "zip"
 
-          - os: macos-14
-            platform: macOS
-            output_extension: "dmg"
+          #- os: macos-15
+          #  platform: macOS
+          #  output_extension: "dmg"
 
     steps:
+      - name: Extract version
+        shell: bash
+        run: |
+          VERSION=$(echo "${GITHUB_REF_NAME}" | sed 's/^[vV]//')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Extracted version: $VERSION"
+
       # Checkout repository code
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -69,6 +78,7 @@ jobs:
             python3-dev \
             python3-venv \
             python3-pip \
+            python3-tk \
             libgirepository1.0-dev \
             libcairo2-dev \
             pkg-config \
@@ -156,67 +166,40 @@ jobs:
         if: matrix.platform == 'linux'
         run: |
           mkdir -p dist
-          mv dist/*.deb dist/LLMPipeGUI-${{ matrix.ubuntu_ver }}-${{ matrix.mint_ver }}.deb
+          mv dist/*.deb dist/LLMPipeGUI${{ env.VERSION }}-${{ matrix.ubuntu_ver }}-${{ matrix.mint_ver }}.deb
 
       # Rename .rpm file
       - name: Rename .rpm
         if: matrix.distro == 'fedora'
         run: |
-          mv dist/*.rpm dist/LLMPipeGUI-fedora.rpm
+          mv dist/*.rpm dist/LLMPipeGUI${{ env.VERSION }}-fedora.rpm
         shell: bash
 
       # Rename .pkg.tar.zst file
       - name: Rename .pkg.tar.zst
         if: matrix.distro == 'archlinux'
         run: |
-          mv dist/*.pkg.tar.zst dist/LLMPipeGUI-archlinux.pkg.tar.zst
+          mv dist/*.pkg.tar.zst dist/LLMPipeGUI${{ env.VERSION }}-archlinux.pkg.tar.zst
         shell: bash
 
       - name: Rename .dmg (macOS)
         if: matrix.platform == 'macOS'
-        run: mv dist/*.dmg dist/LLMPipeGUI-macOS.dmg
+        run: mv dist/*.dmg dist/LLMPipeGUI${{ env.VERSION }}-macOS.dmg
 
       - name: Zip windows application
         if: matrix.platform == 'windows'
-        run: Compress-Archive -Path dist/LLMPipeGUI/* -DestinationPath dist/LLMPipeGUI-windows.zip
+        run: Compress-Archive -Path dist/LLMPipeGUI/* -DestinationPath dist/LLMPipeGUI${{ env.VERSION }}-windows.zip
         shell: pwsh
 
-      # Upload generated installers as build artifacts
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: LLMPipeGUI-installer-${{ matrix.platform }}-${{ matrix.distro || matrix.ubuntu_ver || 'standard' }}
-          path: |
-            dist/*.${{ matrix.output_extension }}
-            dist/*.AppImage
-            dist/*.pkg
-            dist/*.zip
-            dist/*
-          if-no-files-found: error
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download All Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: dist
-          merge-multiple: true
-
-      - name: Release and Upload Assets
+      - name: Upload Asset to Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/*
+            dist/LLMPipeGUI*
           name: "LLMPipeGUI ${{ github.ref_name }}"
           body_path: release-notes.md
+          fail_on_unmatched_files: false
+          allow_updates: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

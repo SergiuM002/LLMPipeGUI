@@ -32,5 +32,10 @@ requires = [
     "screeninfo==0.8.1"
 ]
 
+[tool.briefcase.app.llmpipegui.linux.system.debian]
+system_runtime_requires = [
+    "python3-tk",
+]
+
 [tool.briefcase.app.llmpipegui.macOS]
 universal_build = false
