@@ -29,11 +29,25 @@ class ViewSessionsController:
             
         new_sessions = []
         # Reuse existing tabs rather than creating duplicate views.
-        session_view_map = {view.controller.session_name: view for view in self.main_ctrl.session_views}
+        session_view_map = {
+            (
+                view.controller.session_name,
+                view.controller.server,
+                view.controller.user
+            ): view for view in self.main_ctrl.session_views
+        }
         
         for session_info in sessions_info:
-            if session_info["name"] in [ctrl.session_name for ctrl in self.main_ctrl.session_ctrls]:
-                self.view.show_session(session_view_map[session_info["name"]])
+            # Do not create new SessionTab if one already exists for a given session
+            if ((session_info["name"], session_info["server"], session_info["user"]) in 
+                [(ctrl.session_name, ctrl.server, ctrl.user) for ctrl in self.main_ctrl.session_ctrls]):
+                self.view.show_session(
+                    session_view_map[
+                        session_info["name"],
+                        session_info["server"],
+                        session_info["user"]
+                    ]
+                )
                 continue
             
             new_ctrl = SessionTabController(

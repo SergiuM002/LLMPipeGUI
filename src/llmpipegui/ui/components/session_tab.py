@@ -89,7 +89,7 @@ class SessionTab(ctk.CTkFrame):
             text_color=Theme.GREEN_BUTTON_TEXT,
             fg_color=Theme.GREEN_BUTTON,
             hover_color=Theme.GREEN_BUTTON_HOVER,
-            state="normal" if logged_in else "disabled",
+            state="disabled",
             command=self.get_file_button_clicked
         )
         

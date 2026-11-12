@@ -257,6 +257,8 @@ class MainController:
         Checks the logs on the server and updates the session's progress
         accordingly.
         """
+        
+        # Update the remote install window if open
         if self.remote_install_window:
             self.remote_install_window.update_login()
         

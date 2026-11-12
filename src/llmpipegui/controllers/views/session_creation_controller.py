@@ -142,7 +142,9 @@ class CreateSessionController:
             return True
         
         for session in self.main_ctrl.session_ctrls:
-            if session.session_name == session_name:
+            if (session.session_name == session_name 
+            and session.server == self.main_ctrl.server
+            and session.user == self.main_ctrl.user):
                 return True
             
         return False
